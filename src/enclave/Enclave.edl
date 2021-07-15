@@ -1,0 +1,153 @@
+/*
+ * Copyright (C) 2011-2020 Intel Corporation. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *   * Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *   * Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in
+ *     the documentation and/or other materials provided with the
+ *     distribution.
+ *   * Neither the name of Intel Corporation nor the names of its
+ *     contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ */
+
+/* Enclave.edl - Top EDL file. */
+
+//#define PCM_COUNT
+//#define SGX_COUNTERS
+
+enclave {
+
+    from "sgx_tstdc.edl" import *;
+    from "sgx_pthread.edl" import *;
+
+    trusted {
+        public sgx_status_t total_init();
+
+};
+
+untrusted {
+        /*
+        * ocall_print_string - invokes OCALL to display string buffer inside the enclave.
+        *  [in]: copy the string buffer to App outside.
+        *  [string]: specifies 'str' is a NULL terminated buffer.
+        */
+
+	/**
+	 * Timings for section
+	 */
+
+	void ocall_startJoin();
+	void ocall_stopJoin();
+	void ocall_startHistogramComputation();
+	void ocall_stopHistogramComputation();
+	void ocall_startNetworkPartitioning();
+	void ocall_stopNetworkPartitioning();
+	void ocall_startLocalProcessing();
+	void ocall_stopLocalProcessing();
+	void ocall_storePhaseData();
+
+	/**
+	 * Timing for synchronization and preparations
+	 */
+
+	void ocall_startWindowAllocation();
+	void ocall_stopWindowAllocation();
+	void ocall_startWaitingForNetworkCompletion();
+	void ocall_stopWaitingForNetworkCompletion();
+	void ocall_startLocalProcessingPreparations();
+	void ocall_stopLocalProcessingPreparations();
+	void ocall_storeSpecialData();
+
+	/**
+	 * Specific counters for histogram computation
+	 */
+
+	void ocall_startHistogramLocalHistogramComputation();
+	void ocall_stopHistogramLocalHistogramComputation(uint64_t numberOfElemenets);
+	void ocall_startHistogramGlobalHistogramComputation();
+	void ocall_stopHistogramGlobalHistogramComputation();
+	void ocall_startHistogramAssignmentComputation();
+	void ocall_stopHistogramAssignmentComputation();
+	void ocall_startHistogramOffsetComputation();
+	void ocall_stopHistogramOffsetComputation();
+	void ocall_storeHistogramComputationData();
+
+	void ocall_startNetworkPartitioningMemoryAllocation();
+	void ocall_stopNetworkPartitioningMemoryAllocation(uint64_t bufferSize);
+	void ocall_startNetworkPartitioningMainPartitioning();
+	void ocall_stopNetworkPartitioningMainPartitioning(uint64_t numberOfElemenets);
+	void ocall_startNetworkPartitioningFlushPartitioning();
+	void ocall_stopNetworkPartitioningFlushPartitioning();
+	void ocall_startNetworkPartitioningWindowPut();
+	void ocall_stopNetworkPartitioningWindowPut();
+	void ocall_startNetworkPartitioningWindowWait();
+	void ocall_stopNetworkPartitioningWindowWait();
+	void ocall_storeNetworkPartitioningData();
+
+
+	/**
+	 * Specific ocall_counters for local partitioning
+	 */
+
+	void ocall_startLocalPartitioningTask();
+	void ocall_stopLocalPartitioningTask();
+	void ocall_startLocalPartitioningHistogramComputation();
+	void ocall_stopLocalPartitioningHistogramComputation(uint64_t numberOfElemenets);
+	void ocall_startLocalPartitioningOffsetComputation();
+	void ocall_stopLocalPartitioningOffsetComputation();
+	void ocall_startLocalPartitioningMemoryAllocation();
+	void ocall_stopLocalPartitioningMemoryAllocation(uint64_t bufferSize);
+	void ocall_startLocalPartitioningPartitioning();
+	void ocall_stopLocalPartitioningPartitioning(uint64_t numberOfElemenets);
+	void ocall_storeLocalPartitioningData();
+
+	/**
+	 * Specific ocall_counters for build-probe phase
+	 */
+
+	void ocall_startBuildProbeTask();
+	void ocall_stopBuildProbeTask();
+	void ocall_startBuildProbeMemoryAllocation();
+	void ocall_stopBuildProbeMemoryAllocation(uint64_t numberOfElemenets);
+	void ocall_startBuildProbeBuild();
+	void ocall_stopBuildProbeBuild(uint64_t numberOfElemenets);
+	void ocall_startBuildProbeProbe();
+	void ocall_stopBuildProbeProbe(uint64_t numberOfElemenets);
+	void ocall_storeBuildProbeData();
+
+	void ocall_writeMetaData([in, string] const char *key, [in, string] char *value);
+	void ocall_writeMetaData_int([in, string] const char *key, uint64_t value);
+
+	void ocall_startHardwareCounters();
+	void ocall_printHardwareCounters([in, string] const char* name);
+
+	void ocall_printMemoryUtilization([in, string] const char* name);
+
+
+	void ocall_init(int32_t nodeId, uint32_t numberOfNodes, [in, string] char* tag);
+	void ocall_serializeResults([out, count=10] uint64_t* result);
+	void ocall_sendMeasurementsToAggregator();
+	void ocall_receiveAllMeasurements(uint32_t numberOfNodes, uint32_t nodeId);
+	void ocall_printMeasurements(uint32_t numberOfNodes, uint32_t nodeId);
+	void ocall_storeAllMeasurements();
+    };
+};
