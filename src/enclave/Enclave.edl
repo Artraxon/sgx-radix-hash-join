@@ -42,6 +42,8 @@ enclave {
     trusted {
         public sgx_status_t total_init();
 
+        public uint64_t ecall_getResultCounter();
+
 };
 
 untrusted {
@@ -149,5 +151,15 @@ untrusted {
 	void ocall_receiveAllMeasurements(uint32_t numberOfNodes, uint32_t nodeId);
 	void ocall_printMeasurements(uint32_t numberOfNodes, uint32_t nodeId);
 	void ocall_storeAllMeasurements();
+
+	/**
+	* Misc
+	*/
+
+	uint64_t ocall_rand();
+	void ocall_srand(uint64_t seed);
+    void ocall_print_string(int out, [in, string] const char *str);
+    void ocall_fflush(int out);
+    void ocall_gethostname([out, count=len] char *name, int len);
     };
 };

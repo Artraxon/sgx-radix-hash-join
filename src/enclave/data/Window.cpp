@@ -8,7 +8,7 @@
 
 #include <core/Configuration.h>
 #include <utils/Debug.h>
-#include <performance/Measurements.h>
+#include <Enclave_t.h>
 
 #include <unistd.h>
 
@@ -83,8 +83,10 @@ void Window::write(uint32_t partitionId, CompressedTuple* tuples, uint64_t sizeI
 
 	//JOIN_DEBUG("Window", "Initializing write for partition %d of %lu tuples", partitionId, sizeInTuples);
 
+
 #ifdef MEASUREMENT_DETAILS_NETWORK
-	enclave::performance::Measurements::startNetworkPartitioningWindowPut();
+    ocall_startNetworkPartitioningWindowPut();
+	//enclave::performance::Measurements::startNetworkPartitioningWindowPut();
 #endif
 
 	uint32_t targetProcess = this->assignment[partitionId];
@@ -112,12 +114,14 @@ void Window::write(uint32_t partitionId, CompressedTuple* tuples, uint64_t sizeI
 			this->writeCounters[partitionId]);
 
 #ifdef MEASUREMENT_DETAILS_NETWORK
-	enclave::performance::Measurements::stopNetworkPartitioningWindowPut();
+    ocall_stopNetworkPartitioningWindowPut();
+	//enclave::performance::Measurements::stopNetworkPartitioningWindowPut();
 #endif
 
 	if (flush) {
 #ifdef MEASUREMENT_DETAILS_NETWORK
-	enclave::performance::Measurements::startNetworkPartitioningWindowWait();
+	//enclave::performance::Measurements::startNetworkPartitioningWindowWait();
+    ocall_startNetworkPartitioningWindowWait();
 #endif
 		#ifdef USE_FOMPI
 		foMPI_Win_flush_local(targetProcess, *window);
@@ -125,7 +129,8 @@ void Window::write(uint32_t partitionId, CompressedTuple* tuples, uint64_t sizeI
 		MPI_Win_flush_local(targetProcess, *window);
 		#endif
 #ifdef MEASUREMENT_DETAILS_NETWORK
-	enclave::performance::Measurements::stopNetworkPartitioningWindowWait();
+	//enclave::performance::Measurements::stopNetworkPartitioningWindowWait();
+    ocall_stopNetworkPartitioningWindowWait();
 #endif
 	}
 

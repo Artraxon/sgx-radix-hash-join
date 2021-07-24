@@ -4,7 +4,7 @@
  *
  */
 
-#include "Relation.h"
+#include "../../shared/data/Relation.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -15,7 +15,10 @@
 #include <utils/Debug.h>
 #include <memory/Pool.h>
 
-#define RAND_RANGE(N) (((double) rand() / ((double) RAND_MAX + 1)) * (N))
+#include <Enclave_t.h>
+#include <utils/OcallWrappers.h>
+
+#define RAND_RANGE(N) (((double) oc_rand() / ((double) RAND_MAX + 1)) * (N))
 
 #define EXCHANGE_DATA_TAG 456378
 

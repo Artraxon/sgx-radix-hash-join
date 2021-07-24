@@ -7,6 +7,8 @@
 
 #include "Pool.h"
 
+//#include "tcmalloc.h"
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -24,8 +26,8 @@ uint64_t Pool::upperAddressBound;
 
 void Pool::allocate(uint64_t size) {
 
-	int result = posix_memalign((void **) &(data), 64, size);
-	JOIN_ASSERT(result == 0, "Pool", "Could not allocate memory");
+	data = memalign(64, size);
+	JOIN_ASSERT(data != nullptr, "Pool", "Could not allocate memory");
 	memset(data, 0, size);
 
 	dataSize = size;
@@ -54,8 +56,8 @@ void* Pool::getMemory(uint64_t size) {
 		remainingSize -= aligned64Size;
 	} else {
 		JOIN_DEBUG("Pool", "Out of memory");
-		int result = posix_memalign((void **) &(memory), 64, size);
-		JOIN_ASSERT(result == 0, "Pool", "Could not allocate memory");
+		memory = memalign(64, size);
+		JOIN_ASSERT(memory != nullptr, "Pool", "Could not allocate memory");
 	}
 
 	JOIN_ASSERT(((uint64_t ) memory) % 64 == 0, "Pool", "Returned memory not aligned to 64")

@@ -5,12 +5,13 @@
  */
 
 #include "Measurements.h"
-
+#include "Enclave_u.h"
+#include <app/App.h>
 #define MSG_TAG_RESULTS 154895
 
-#include <operators/HashJoin.h>
 #include <core/Configuration.h>
 #include <utils/Debug.h>
+#include <data/Tuple.h>
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -180,7 +181,7 @@ void Measurements::storeSpecialData() {
 
 /************************************************************/
 
-uint64_t Measurements::histogramLocalHistogr amComputationIdx = 0;
+uint64_t Measurements::histogramLocalHistogramComputationIdx = 0;
 uint64_t Measurements::histogramLocalHistogramComputationTimes[2];
 uint64_t Measurements::histogramLocalHistogramComputationElements[2];
 
@@ -521,7 +522,7 @@ uint64_t* Measurements::serializeResults() {
 
 	uint64_t *result = (uint64_t *) calloc(NUM_OF_RESULT_ELEMENTS, sizeof(uint64_t));
 
-	result[0] = hpcjoin::operators::HashJoin::RESULT_COUNTER;
+	ecall_getResultCounter(global_eid, result);
 	result[1] = totalTime;
 	result[2] = phaseTimes[0];
 	result[3] = phaseTimes[1];
@@ -563,7 +564,7 @@ void Measurements::printMeasurements(uint32_t numberOfNodes, uint32_t nodeId) {
 
 	JOIN_ASSERT(nodeId == hpcjoin::core::Configuration::RESULT_AGGREGATION_NODE, "Measurements", "Only coordinator should print results");
 
-	receiveAllMeasurments(numberOfNodes, nodeId);
+	receiveAllMeasurements(numberOfNodes, nodeId);
 
 	printf("[RESULTS] Tuples:\t");
 	uint64_t totalNumberOfTuples = 0;

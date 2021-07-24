@@ -10,8 +10,8 @@
 #include <mpi.h>
 
 #include <core/Configuration.h>
-#include <performance/Measurements.h>
 
+#include <Enclave_t.h>
 namespace hpcjoin {
 namespace histograms {
 
@@ -39,7 +39,8 @@ OffsetMap::~OffsetMap() {
 void OffsetMap::computeOffsets() {
 
 #ifdef MEASUREMENT_DETAILS_HISTOGRAM
-	enclave::performance::Measurements::startHistogramOffsetComputation();
+    ocall_startHistogramOffsetComputation();
+	//enclave::performance::Measurements::startHistogramOffsetComputation();
 #endif
 
 	computeBaseOffsets();
@@ -47,7 +48,8 @@ void OffsetMap::computeOffsets() {
 	computeAbsolutePrivateOffsets();
 
 #ifdef MEASUREMENT_DETAILS_HISTOGRAM
-	enclave::performance::Measurements::stopHistogramOffsetComputation();
+	ocall_stopHistogramOffsetComputation();
+	//enclave::performance::Measurements::stopHistogramOffsetComputation();
 #endif
 
 }

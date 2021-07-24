@@ -14,10 +14,11 @@
 #include <tasks/NetworkPartitioning.h>
 #include <tasks/LocalPartitioning.h>
 #include <tasks/BuildProbe.h>
-#include <performance/Measurements.h>
 #include <utils/Debug.h>
 #include <memory/Pool.h>
 #include <data/CompressedTuple.h>
+
+#include <Enclave_t.h>
 
 namespace hpcjoin {
 namespace operators {
@@ -43,7 +44,8 @@ void HashJoin::join() {
 	/**********************************************************************/
 
 	MPI_Barrier(MPI_COMM_WORLD);
-	hpcjoin::performance::Measurements::startJoin();
+	ocall_startJoin();
+	//hpcjoin::performance::Measurements::startJoin();
 
 	/**********************************************************************/
 
@@ -51,11 +53,13 @@ void HashJoin::join() {
 	 * Histogram computation
 	 */
 
-	hpcjoin::performance::Measurements::startHistogramComputation();
+	ocall_startHistogramComputation();
+	//hpcjoin::performance::Measurements::startHistogramComputation();
 	hpcjoin::tasks::HistogramComputation *histogramComputation = new hpcjoin::tasks::HistogramComputation(this->numberOfNodes, this->nodeId, this->innerRelation,
 			this->outerRelation);
 	histogramComputation->execute();
-	hpcjoin::performance::Measurements::stopHistogramComputation();
+	ocall_stopHistogramComputation();
+	//hpcjoin::performance::Measurements::stopHistogramComputation();
 	JOIN_MEM_DEBUG("Histogram phase completed");
 
 	/**********************************************************************/
@@ -64,7 +68,8 @@ void HashJoin::join() {
 	 * Window allocation
 	 */
 
-	hpcjoin::performance::Measurements::startWindowAllocation();
+	ocall_startWindowAllocation();
+	//hpcjoin::performance::Measurements::startWindowAllocation();
 	hpcjoin::data::Window *innerWindow = new hpcjoin::data::Window(this->numberOfNodes, this->nodeId, histogramComputation->getAssignment(),
 			histogramComputation->getInnerRelationLocalHistogram(), histogramComputation->getInnerRelationGlobalHistogram(), histogramComputation->getInnerRelationBaseOffsets(),
 			histogramComputation->getInnerRelationWriteOffsets());
@@ -72,7 +77,8 @@ void HashJoin::join() {
 	hpcjoin::data::Window *outerWindow = new hpcjoin::data::Window(this->numberOfNodes, this->nodeId, histogramComputation->getAssignment(),
 			histogramComputation->getOuterRelationLocalHistogram(), histogramComputation->getOuterRelationGlobalHistogram(), histogramComputation->getOuterRelationBaseOffsets(),
 			histogramComputation->getOuterRelationWriteOffsets());
-	hpcjoin::performance::Measurements::stopWindowAllocation();
+	ocall_stopWindowAllocation();
+	//hpcjoin::performance::Measurements::stopWindowAllocation();
 	JOIN_MEM_DEBUG("Window allocated");
 
 	/**********************************************************************/
@@ -81,11 +87,13 @@ void HashJoin::join() {
 	 * Network partitioning
 	 */
 
-	hpcjoin::performance::Measurements::startNetworkPartitioning();
+	ocall_startNetworkPartitioning();
+	//hpcjoin::performance::Measurements::startNetworkPartitioning();
 	hpcjoin::tasks::NetworkPartitioning *networkPartitioning = new hpcjoin::tasks::NetworkPartitioning(this->nodeId, this->innerRelation, this->outerRelation, innerWindow,
 			outerWindow);
 	networkPartitioning->execute();
-	hpcjoin::performance::Measurements::stopNetworkPartitioning();
+	ocall_stopNetworkPartitioning();
+	//hpcjoin::performance::Measurements::stopNetworkPartitioning();
 	JOIN_MEM_DEBUG("Network phase completed");
 
 	// OPTIMIZATION Save memory as soon as possible
@@ -99,9 +107,11 @@ void HashJoin::join() {
 	 * Main synchronization
 	 */
 
-	hpcjoin::performance::Measurements::startWaitingForNetworkCompletion();
+	ocall_startWaitingForNetworkCompletion();
+	//hpcjoin::performance::Measurements::startWaitingForNetworkCompletion();
 	MPI_Barrier(MPI_COMM_WORLD);
-	hpcjoin::performance::Measurements::stopWaitingForNetworkCompletion();
+	ocall_stopWaitingForNetworkCompletion();
+	//hpcjoin::performance::Measurements::stopWaitingForNetworkCompletion();
 
 	/**********************************************************************/
 
@@ -109,7 +119,8 @@ void HashJoin::join() {
 	 * Prepare transition
 	 */
 
-	hpcjoin::performance::Measurements::startLocalProcessingPreparations();
+	ocall_startLocalProcessingPreparations();
+	//hpcjoin::performance::Measurements::startLocalProcessingPreparations();
 	if (hpcjoin::core::Configuration::ENABLE_TWO_LEVEL_PARTITIONING) {
 		//enclave::memory::Pool::allocate((innerWindow->computeLocalWindowSize() + outerWindow->computeLocalWindowSize())*sizeof(enclave::data::Tuple));
 		hpcjoin::memory::Pool::reset();
@@ -137,7 +148,8 @@ void HashJoin::join() {
 
 	JOIN_MEM_DEBUG("Local phase prepared");
 
-	hpcjoin::performance::Measurements::stopLocalProcessingPreparations();
+	ocall_stopLocalProcessingPreparations();
+	//hpcjoin::performance::Measurements::stopLocalProcessingPreparations();
 
 	/**********************************************************************/
 
@@ -149,7 +161,8 @@ void HashJoin::join() {
 	bool windowsDeleted = false;
 
 	// Execute tasks
-	hpcjoin::performance::Measurements::startLocalProcessing();
+	ocall_startLocalProcessing();
+	//hpcjoin::performance::Measurements::startLocalProcessing();
 	while (TASK_QUEUE.size() > 0) {
 
 		hpcjoin::tasks::Task *task = TASK_QUEUE.front();
@@ -168,13 +181,15 @@ void HashJoin::join() {
 		delete task;
 
 	}
-	hpcjoin::performance::Measurements::stopLocalProcessing();
+	ocall_stopLocalProcessing();
+	//hpcjoin::performance::Measurements::stopLocalProcessing();
 
 	JOIN_MEM_DEBUG("Local phase completed");
 
 	/**********************************************************************/
 
-	hpcjoin::performance::Measurements::stopJoin();
+	ocall_stopJoin();
+	//hpcjoin::performance::Measurements::stopJoin();
 
 	// OPTIMIZATION (see above)
 	if (!windowsDeleted) {
@@ -186,3 +201,7 @@ void HashJoin::join() {
 
 } /* namespace operators */
 } /* namespace enclave */
+
+uint64_t ecall_getResultCounter(void){
+    return hpcjoin::operators::HashJoin::RESULT_COUNTER;
+}

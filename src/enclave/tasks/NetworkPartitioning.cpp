@@ -13,7 +13,8 @@
 #include <core/Configuration.h>
 #include <data/CompressedTuple.h>
 #include <utils/Debug.h>
-#include <performance/Measurements.h>
+
+#include <Enclave_t.h>
 
 #define NETWORK_PARTITIONING_CACHELINE_SIZE (64)
 #define TUPLES_PER_CACHELINE (NETWORK_PARTITIONING_CACHELINE_SIZE / sizeof(hpcjoin::data::CompressedTuple))
@@ -82,7 +83,8 @@ void NetworkPartitioning::partition(hpcjoin::data::Relation *relation, hpcjoin::
 	const uint32_t partitionBits = hpcjoin::core::Configuration::NETWORK_PARTITIONING_FANOUT;
 
 #ifdef MEASUREMENT_DETAILS_NETWORK
-	enclave::performance::Measurements::startNetworkPartitioningMemoryAllocation();
+	ocall_startNetworkPartitioningMemoryAllocation();
+	//enclave::performance::Measurements::startNetworkPartitioningMemoryAllocation();
 #endif
 
 	hpcjoin::data::CompressedTuple * inMemoryBuffer = NULL;
@@ -92,7 +94,8 @@ void NetworkPartitioning::partition(hpcjoin::data::Relation *relation, hpcjoin::
 	memset(inMemoryBuffer, 0, inMemoryBufferSize);
 
 #ifdef MEASUREMENT_DETAILS_NETWORK
-	enclave::performance::Measurements::stopNetworkPartitioningMemoryAllocation(inMemoryBufferSize);
+	ocall_stopNetworkPartitioningMemoryAllocation(inMemoryBufferSize);
+	//enclave::performance::Measurements::stopNetworkPartitioningMemoryAllocation(inMemoryBufferSize);
 #endif
 
 	// Create in-cache buffer
@@ -105,7 +108,8 @@ void NetworkPartitioning::partition(hpcjoin::data::Relation *relation, hpcjoin::
 	}
 
 #ifdef MEASUREMENT_DETAILS_NETWORK
-	enclave::performance::Measurements::startNetworkPartitioningMainPartitioning();
+	ocall_startNetworkPartitioningMainPartitioning();
+	//enclave::performance::Measurements::startNetworkPartitioningMainPartitioning();
 #endif
 
 	for (uint64_t i = 0; i < numberOfElements; ++i) {
@@ -160,13 +164,15 @@ void NetworkPartitioning::partition(hpcjoin::data::Relation *relation, hpcjoin::
 	}
 
 #ifdef MEASUREMENT_DETAILS_NETWORK
-	enclave::performance::Measurements::stopNetworkPartitioningMainPartitioning(numberOfElements);
+ocall_stopNetworkPartitioningMainPartitioning(numberOfElements);
+	//enclave::performance::Measurements::stopNetworkPartitioningMainPartitioning(numberOfElements);
 #endif
 
 	JOIN_DEBUG("Network Partitioning", "Node %d is flushing remaining tuples", this->nodeId);
 
 #ifdef MEASUREMENT_DETAILS_NETWORK
-	enclave::performance::Measurements::startNetworkPartitioningFlushPartitioning();
+	ocall_startNetworkPartitioningFlushPartitioning();
+	//enclave::performance::Measurements::startNetworkPartitioningFlushPartitioning();
 #endif
 
 	// Flush remaining elements to memory buffers
@@ -196,7 +202,8 @@ void NetworkPartitioning::partition(hpcjoin::data::Relation *relation, hpcjoin::
 	free(inMemoryBuffer);
 
 #ifdef MEASUREMENT_DETAILS_NETWORK
-	enclave::performance::Measurements::stopNetworkPartitioningFlushPartitioning();
+	ocall_stopNetworkPartitioningFlushPartitioning();
+	//enclave::performance::Measurements::stopNetworkPartitioningFlushPartitioning();
 #endif
 
 	window->assertAllTuplesWritten();

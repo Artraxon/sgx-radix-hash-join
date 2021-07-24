@@ -9,7 +9,12 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+
+#ifndef NATIVE_COMPILATION
 #include "Enclave_t.h"
+#else
+#include <enclave/performance/Measurements.h>
+#endif
 
 /*********************************/
 
@@ -49,9 +54,15 @@
 
 #ifdef JOIN_MEMORY_PRINT
 
+#ifndef NATIVE_COMPILATION
 #define JOIN_MEM_DEBUG(A) { \
     ocall_printMemoryUtilization(const char* A);                       \
 }
+#else
+#define JOIN_MEM_DEBUG(A) { \
+    Measurements::printMemoryUtilization(const char* A);                \
+}
+#endif
 
 #else
 

@@ -10,8 +10,7 @@
 
 #include <core/Configuration.h>
 #include <utils/Debug.h>
-#include <performance/Measurements.h>
-
+#include <Enclave_t.h>
 namespace hpcjoin {
 namespace histograms {
 
@@ -32,13 +31,15 @@ GlobalHistogram::~GlobalHistogram() {
 void GlobalHistogram::computeGlobalHistogram() {
 
 #ifdef MEASUREMENT_DETAILS_HISTOGRAM
-	enclave::performance::Measurements::startHistogramGlobalHistogramComputation();
+    ocall_startHistogramGlobalHistogramComputation();
+	//enclave::performance::Measurements::startHistogramGlobalHistogramComputation();
 #endif
 
 	MPI_Allreduce(this->localHistogram->getLocalHistogram(), this->values, hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT, MPI_UINT64_T, MPI_SUM, MPI_COMM_WORLD);
 
 #ifdef MEASUREMENT_DETAILS_HISTOGRAM
-	enclave::performance::Measurements::stopHistogramGlobalHistogramComputation();
+	ocall_stopHistogramGlobalHistogramComputation();
+	//enclave::performance::Measurements::stopHistogramGlobalHistogramComputation();
 #endif
 
 }

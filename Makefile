@@ -19,7 +19,7 @@ MPICXX				= $(MPI_FOLDER)/bin/mpic++
 
 SOURCE_FOLDER		= src
 BUILD_FOLDER		= build
-RELEASE_FOLDER		= release
+RELEASE_FOLDER		= artifacts
 ENCLAVE_FOLDER 		= enclave
 
 ########################################
@@ -72,6 +72,10 @@ SGX_COMMON_CFLAGS := $(SGX_COMMON_FLAGS) -Wjump-misses-init -Wstrict-prototypes 
 SGX_COMMON_CXXFLAGS := $(SGX_COMMON_FLAGS) -Wnon-virtual-dtor -std=c++11
 
 
+######## shared Settings ########
+
+Shared_Cpp_Files := $(shell find ./src/shared -name "*.cpp")
+
 ######## app Settings ########
 
 ifneq ($(SGX_MODE), HW)
@@ -85,9 +89,15 @@ App_C_Files :=  $(shell find ./src/untrusted -name "*.c")
 App_Include_Paths := -I$(SGX_SDK)/include \
 					 -I/usr/include/c++/9 \
 					 -I/usr/lib/x86_64-linux-gnu/openmpi/include \
-					 -Igenerated/untrusted
+					 -Igenerated/untrusted \
+					 -Isrc/untrusted \
+					 -Isrc/shared
 
-App_C_Flags := -fPIC -fopenmp -Wno-attributes $(App_Include_Paths) -DOMPI_IGNORE_CXX_SEEK
+App_C_Flags := -fPIC -fopenmp -Wno-attributes $(App_Include_Paths) \
+			   -DOMPI_IGNORE_CXX_SEEK -DNATIVE_COMPILATION \
+			   -D MEASUREMENT_DETAILS_HISTOGRAM -D MEASUREMENT_DETAILS_NETWORK \
+			   -D MEASUREMENT_DETAILS_LOCALPART -D MEASUREMENT_DETAILS_LOCALBP
+
 App_C_Flags += $(CFLAGS)
 
 # Three configuration modes - Debug, prerelease, release
@@ -104,10 +114,11 @@ endif
 
 App_Cpp_Flags := $(App_C_Flags)
 App_Link_Flags := -L$(SGX_LIBRARY_PATH) -l$(Urts_Library_Name) -lpthread \
-				  -lgomp \
+				  -lgomp -lpapi \
 
-App_Cpp_Objects := $(App_Cpp_Files:src/%.cpp=build/%.o)
-App_Cpp_Objects += $(App_C_Files:src/%.c=build/%.o)
+App_Cpp_Objects := $(App_Cpp_Files:./src/%.cpp=build/%.o)
+App_Cpp_Objects += $(App_C_Files:./src/%.c=build/%.o)
+App_Cpp_Objects += $(Shared_Cpp_Files:./src/shared/%.c=build/shared/untrusted/%.o)
 
 
 App_Name := app
@@ -125,11 +136,19 @@ Crypto_Library_Name := sgx_tcrypto
 Enclave_Cpp_Files :=  $(shell find ./src/enclave -name "*.cpp")
 Enclave_C_Files :=  $(shell find ./src/enclave -name "*.c")
 
-Enclave_Include_Paths := -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/libcxx -I generated/trusted
+Enclave_Include_Paths := -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc \
+						 -I$(SGX_SDK)/include/libcxx -I generated/trusted \
+						 -I src/enclave -I src/shared \
+						 -I /usr/lib/gcc/x86_64-linux-gnu/9/include
+
 # $(addprefix -I,$(INCLUDE_ENCLAVE)) \
 
 Enclave_C_Flags := $(Enclave_Include_Paths) $(CFLAGS) -nostdinc -fvisibility=hidden -fpie -ffunction-sections \
-					-fdata-sections $(MITIGATION_CFLAGS) -fopenmp -Wno-missing-field-initializers
+				   -fdata-sections $(MITIGATION_CFLAGS) -fopenmp -Wno-missing-field-initializers \
+				   -mavx \
+			   	   -D MEASUREMENT_DETAILS_HISTOGRAM -D MEASUREMENT_DETAILS_NETWORK \
+			       -D MEASUREMENT_DETAILS_LOCALPART -D MEASUREMENT_DETAILS_LOCALBP
+
 CC_BELOW_4_9 := $(shell expr "`$(CC) -dumpversion`" \< "4.9")
 ifeq ($(CC_BELOW_4_9), 1)
 	Enclave_C_Flags += -fstack-protector
@@ -158,10 +177,11 @@ Enclave_Link_Flags := $(Enclave_Security_Link_Flags) \
 	-Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined \
 	-Wl,-pie,-eenclave_entry -Wl,--export-dynamic  \
 	-Wl,--defsym,__ImageBase=0 -Wl,--gc-sections   \
-	-Wl,--version-script=Enclave/Enclave.lds
+	-Wl,--version-script=$(ROOT_DIR)/src/enclave/Enclave.lds
 
 Enclave_Cpp_Objects := $(sort $(Enclave_Cpp_Files:.cpp=.o))
 Enclave_Cpp_Objects += $(sort $(Enclave_C_Files:.c=.o))
+Enclave_Cpp_Objects += $(Shared_Cpp_Files:./src/shared/%.c=build/shared/trusted/%.o)
 
 Enclave_Name := enclave.so
 Signed_Enclave_Name := enclave.signed.so
@@ -233,6 +253,16 @@ ifneq ($(Build_Mode), HW_RELEASE)
 endif
 
 ########################################
+#Shared Part
+
+build/shared/untrusted/%.o: src/shared/%.cpp
+	mkdir -p $(@D)
+	$(MPI_FOLDER)/bin/mpic++ $(SGX_COMMON_CXXFLAGS) $(App_Cpp_Flags) $(COMPILER_FLAGS) -c $< -I $(ROOT_DIR)/src/shared -I $(PAPI_FOLDER) -I -o $@
+
+build/shared/trusted/%.o: src/shared/%.cpp
+	mkdir -p $(@D)
+	$(MPI_FOLDER)/bin/mpic++ $(SGX_COMMON_CXXFLAGS) $(Enclave_Cpp_Flags) -c $< -o $@ -I $(ROOT_DIR)/src/shared -I /usr/include
+########################################
 
 #Untrusted Part
 .config_$(Build_Mode)_$(SGX_ARCH):
@@ -252,16 +282,17 @@ generated/untrusted/Enclave_u.o: generated/untrusted/Enclave_u.c
 
 build/untrusted/%.o: src/untrusted/%.cpp generated/untrusted/Enclave_u.h
 	mkdir -p $(@D)
-	$(MPI_FOLDER)/bin/mpic++ $(SGX_COMMON_CXXFLAGS) $(App_Cpp_Flags) $(COMPILER_FLAGS) -c $< -I $(ROOT_DIR)/src/untrusted -I $(PAPI_FOLDER) -I $(ROOT_DIR)/generated/untrusted -o $@
+	$(MPI_FOLDER)/bin/mpic++ $(SGX_COMMON_CXXFLAGS) $(App_Cpp_Flags) $(COMPILER_FLAGS) -c $< -I $(ROOT_DIR)/src/untrusted -I $(PAPI_FOLDER) -I $(ROOT_DIR)/generated/untrusted -I $(ROOT_DIR)/src/shared -o $@
 
 build/untrusted/%.o: src/untrusted/%.c generated/untrusted/Enclave_u.h
 	mkdir -p $(@D)
-	$(MPI_FOLDER)/bin/mpic++ $(SGX_COMMON_CXXFLAGS) $(App_Cpp_Flags) $(COMPILER_FLAGS) -c $< -I $(ROOT_DIR)/src/untrusted -I $(PAPI_FOLDER) -I $(ROOT_DIR)/generated/untrusted -o $@
+	$(MPI_FOLDER)/bin/mpic++ $(SGX_COMMON_CXXFLAGS) $(App_Cpp_Flags) $(COMPILER_FLAGS) -c $< -I $(ROOT_DIR)/src/untrusted -I $(PAPI_FOLDER) -I $(ROOT_DIR)/generated/untrusted -I $(ROOT_DIR)/src/shared -o $@
 
 $(App_Name): generated/untrusted/Enclave_u.o $(App_Cpp_Objects)
+	mkdir -p $(RELEASE_FOLDER)
 	@echo "Enter: LINK =>  $@"
-	@echo "CPP Files: $(App_Cpp_Files)"
-	$(CXX) $^ -o $@ $(App_Link_Flags)
+	@echo "CPP Objects: $(App_Cpp_Objects)"
+	$(CXX) $^ -o $(RELEASE_FOLDER)/$@ $(App_Link_Flags)
 	@echo "LINK =>  $@"
 
 
@@ -279,13 +310,13 @@ generated/trusted/Enclave_t.o: generated/trusted/Enclave_t.c
 
 src/enclave/%.o: src/enclave/%.c generated/trusted/Enclave_t.h
 	mkdir -p $(@D)
-	$(CXX) $(SGX_COMMON_CXXFLAGS) $(Enclave_Cpp_Flags) -c $< -o $@ -I $(ROOT_DIR)/src/enclave -I /usr/include/x86_64-linux-gnu -I /usr/include -I /usr/lib/x86_64-linux-gnu/openmpi/include -DOMPI_IGNORE_CXX_SEEK
+	$(CXX) $(SGX_COMMON_CXXFLAGS) $(Enclave_Cpp_Flags) -c $< -o $@ -I $(ROOT_DIR)/src/enclave -I /usr/include/x86_64-linux-gnu -I /usr/include -I /usr/lib/x86_64-linux-gnu/openmpi/include -DOMPI_IGNORE_CXX_SEEK -I $(ROOT_DIR)/src/shared
 	@echo "CXX  <=  $<"
 
 #Enclave/%.o: Enclave/%.cpp Enclave/Enclave_t.h
 src/enclave/%.o: src/enclave/%.cpp generated/trusted/Enclave_t.h
 	mkdir -p $(@D)
-	$(CXX) $(SGX_COMMON_CXXFLAGS) $(Enclave_Cpp_Flags) -c $< -o $@ -I $(ROOT_DIR)/src/enclave -I /usr/include/x86_64-linux-gnu -I /usr/include -I /usr/lib/x86_64-linux-gnu/openmpi/include -DOMPI_IGNORE_CXX_SEEK
+	$(CXX) $(SGX_COMMON_CXXFLAGS) $(Enclave_Cpp_Flags) -c $< -o $@ -I $(ROOT_DIR)/src/enclave -I /usr/include/x86_64-linux-gnu -I /usr/include -I /usr/lib/x86_64-linux-gnu/openmpi/include -DOMPI_IGNORE_CXX_SEEK -I $(ROOT_DIR)/src/shared
 	@echo "CXX  <=  $<"
 
 $(Enclave_Name): generated/trusted/Enclave_t.o $(Enclave_Cpp_Objects)
@@ -308,7 +339,7 @@ program: $(OBJECT_FILES)
 clean:
 	rm -rf $(BUILD_FOLDER)
 	rm -rf $(RELEASE_FOLDER)
-	@rm -f .config_* $(App_Name) $(Enclave_Name) $(Signed_Enclave_Name) $(App_Cpp_Objects) app/Enclave_u.* $(Enclave_Cpp_Objects) Enclave/Enclave_t.*
+	@rm -f .config_* $(App_Name) $(Enclave_Name) $(Signed_Enclave_Name) $(ROOT_DIR)/generated/trusted/Enclave_t.o $(ROOT_DIR)/generated/untrusted/Enclave_u.o
 
 ########################################
 

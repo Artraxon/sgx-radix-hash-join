@@ -3,7 +3,7 @@
 //
 
 #include "measure_ocalls.h"
-#include "generated/untrusted/Enclave_u.h"
+#include <Enclave_u.h>
 #include "enclave/performance/Measurements.h"
 #include <algorithm>
 

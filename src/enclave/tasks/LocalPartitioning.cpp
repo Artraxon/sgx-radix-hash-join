@@ -13,8 +13,9 @@
 #include <operators/HashJoin.h>
 #include <tasks/BuildProbe.h>
 #include <utils/Debug.h>
-#include <performance/Measurements.h>
 #include <memory/Pool.h>
+
+#include <Enclave_t.h>
 
 #define LOCAL_PARTITIONING_CACHELINE_SIZE (64)
 #define TUPLES_PER_CACHELINE (LOCAL_PARTITIONING_CACHELINE_SIZE / sizeof(hpcjoin::data::CompressedTuple))
@@ -54,7 +55,8 @@ LocalPartitioning::~LocalPartitioning() {
 void LocalPartitioning::execute() {
 
 #ifdef MEASUREMENT_DETAILS_LOCALPART
-	enclave::performance::Measurements::startLocalPartitioningTask();
+    ocall_startLocalPartitioningTask();
+	//enclave::performance::Measurements::startLocalPartitioningTask();
 #endif
 
 	uint64_t *innerHistogram = computeHistogram(this->innerPartition, this->innerPartitionSize);
@@ -64,7 +66,8 @@ void LocalPartitioning::execute() {
 	uint64_t *outerOffsets = computePrefixSum(outerHistogram);
 
 #ifdef MEASUREMENT_DETAILS_LOCALPART
-	enclave::performance::Measurements::startLocalPartitioningMemoryAllocation();
+	ocall_startLocalPartitioningMemoryAllocation();
+	//enclave::performance::Measurements::startLocalPartitioningMemoryAllocation();
 #endif
 
 	hpcjoin::data::CompressedTuple *innerPartitions = NULL;
@@ -74,11 +77,13 @@ void LocalPartitioning::execute() {
 	innerPartitions = (hpcjoin::data::CompressedTuple *) hpcjoin::memory::Pool::getMemory(innerOutputSize);
 
 #ifdef MEASUREMENT_DETAILS_LOCALPART
-	enclave::performance::Measurements::stopLocalPartitioningMemoryAllocation(innerOutputSize);
+	ocall_stopLocalPartitioningMemoryAllocation(innerOutputSize);
+	//enclave::performance::Measurements::stopLocalPartitioningMemoryAllocation(innerOutputSize);
 #endif
 
 #ifdef MEASUREMENT_DETAILS_LOCALPART
-	enclave::performance::Measurements::startLocalPartitioningMemoryAllocation();
+ocall_startLocalPartitioningMemoryAllocation();
+	//enclave::performance::Measurements::startLocalPartitioningMemoryAllocation();
 #endif
 
 	hpcjoin::data::CompressedTuple *outerPartitions = NULL;
@@ -88,7 +93,8 @@ void LocalPartitioning::execute() {
 	outerPartitions = (hpcjoin::data::CompressedTuple *) hpcjoin::memory::Pool::getMemory(outerOutputSize);
 
 #ifdef MEASUREMENT_DETAILS_LOCALPART
-	enclave::performance::Measurements::stopLocalPartitioningMemoryAllocation(outerOutputSize);
+	ocall_stopLocalPartitioningMemoryAllocation(outerOutputSize);
+	//enclave::performance::Measurements::stopLocalPartitioningMemoryAllocation(outerOutputSize);
 #endif
 
 	JOIN_DEBUG("Local Partitioning", "Partitioning inner partition of size %lu", innerPartitionSize);
@@ -111,7 +117,8 @@ void LocalPartitioning::execute() {
 	free(outerOffsets);
 
 #ifdef MEASUREMENT_DETAILS_LOCALPART
-	enclave::performance::Measurements::stopLocalPartitioningTask();
+	ocall_stopLocalPartitioningTask();
+	//enclave::performance::Measurements::stopLocalPartitioningTask();
 #endif
 
 }
@@ -121,7 +128,8 @@ uint64_t* LocalPartitioning::computeHistogram(hpcjoin::data::CompressedTuple* tu
 	uint64_t *histogram = (uint64_t*) calloc(hpcjoin::core::Configuration::LOCAL_PARTITIONING_COUNT, sizeof(uint64_t));
 
 #ifdef MEASUREMENT_DETAILS_LOCALPART
-	enclave::performance::Measurements::startLocalPartitioningHistogramComputation();
+	ocall_startLocalPartitioningHistogramComputation();
+	//enclave::performance::Measurements::startLocalPartitioningHistogramComputation();
 #endif
 
 	uint64_t MASK = (hpcjoin::core::Configuration::LOCAL_PARTITIONING_COUNT - 1) << (hpcjoin::core::Configuration::NETWORK_PARTITIONING_FANOUT + hpcjoin::core::Configuration::PAYLOAD_BITS);
@@ -131,7 +139,8 @@ uint64_t* LocalPartitioning::computeHistogram(hpcjoin::data::CompressedTuple* tu
 	}
 
 #ifdef MEASUREMENT_DETAILS_LOCALPART
-	enclave::performance::Measurements::stopLocalPartitioningHistogramComputation(size);
+	ocall_stopLocalPartitioningHistogramComputation(size);
+	//enclave::performance::Measurements::stopLocalPartitioningHistogramComputation(size);
 #endif
 
 	return histogram;
@@ -143,7 +152,8 @@ uint64_t* LocalPartitioning::computePrefixSum(uint64_t* histogram) {
 	uint64_t *prefix = (uint64_t*) calloc(hpcjoin::core::Configuration::LOCAL_PARTITIONING_COUNT, sizeof(uint64_t));
 
 #ifdef MEASUREMENT_DETAILS_LOCALPART
-	enclave::performance::Measurements::startLocalPartitioningOffsetComputation();
+	ocall_startLocalPartitioningOffsetComputation();
+	//enclave::performance::Measurements::startLocalPartitioningOffsetComputation();
 #endif
 
 	uint64_t sum = 0;
@@ -158,7 +168,8 @@ uint64_t* LocalPartitioning::computePrefixSum(uint64_t* histogram) {
 	}
 
 #ifdef MEASUREMENT_DETAILS_LOCALPART
-	enclave::performance::Measurements::stopLocalPartitioningOffsetComputation();
+	ocall_stopLocalPartitioningOffsetComputation();
+	//enclave::performance::Measurements::stopLocalPartitioningOffsetComputation();
 #endif
 
 	return prefix;
@@ -177,7 +188,8 @@ void LocalPartitioning::partitionData(hpcjoin::data::CompressedTuple* input, uin
 	uint64_t MASK = (hpcjoin::core::Configuration::LOCAL_PARTITIONING_COUNT - 1) << (hpcjoin::core::Configuration::NETWORK_PARTITIONING_FANOUT + hpcjoin::core::Configuration::PAYLOAD_BITS);
 
 #ifdef MEASUREMENT_DETAILS_LOCALPART
-	enclave::performance::Measurements::startLocalPartitioningPartitioning();
+	ocall_startLocalPartitioningPartitioning();
+	//enclave::performance::Measurements::startLocalPartitioningPartitioning();
 #endif
 
 	for (uint64_t t = 0; t < inputSize; ++t) {
@@ -210,7 +222,8 @@ void LocalPartitioning::partitionData(hpcjoin::data::CompressedTuple* input, uin
 	}
 
 #ifdef MEASUREMENT_DETAILS_LOCALPART
-	enclave::performance::Measurements::stopLocalPartitioningPartitioning(inputSize);
+	ocall_stopLocalPartitioningPartitioning(inputSize);
+	//enclave::performance::Measurements::stopLocalPartitioningPartitioning(inputSize);
 #endif
 
 }

@@ -7,9 +7,9 @@
 #include "AssignmentMap.h"
 
 #include <stdlib.h>
+#include <Enclave_t.h>
 
 #include <core/Configuration.h>
-#include <performance/Measurements.h>
 
 namespace hpcjoin {
 namespace histograms {
@@ -32,7 +32,8 @@ AssignmentMap::~AssignmentMap() {
 void AssignmentMap::computePartitionAssignment() {
 
 #ifdef MEASUREMENT_DETAILS_HISTOGRAM
-	enclave::performance::Measurements::startHistogramAssignmentComputation();
+    ocall_startHistogramAssignmentComputation();
+	//enclave::performance::Measurements::startHistogramAssignmentComputation();
 #endif
 
 	for(uint32_t p=0; p<hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT; ++p) {
@@ -40,7 +41,8 @@ void AssignmentMap::computePartitionAssignment() {
 	}
 
 #ifdef MEASUREMENT_DETAILS_HISTOGRAM
-	enclave::performance::Measurements::stopHistogramAssignmentComputation();
+ocall_stopHistogramAssignmentComputation();
+	//enclave::performance::Measurements::stopHistogramAssignmentComputation();
 #endif
 
 }

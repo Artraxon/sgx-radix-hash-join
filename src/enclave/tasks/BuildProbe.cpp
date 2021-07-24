@@ -11,7 +11,7 @@
 #include <operators/HashJoin.h>
 #include <core/Configuration.h>
 #include <utils/Debug.h>
-#include <performance/Measurements.h>
+#include <Enclave_t.h>
 
 #define NEXT_POW_2(V)                           \
     do {                                        \
@@ -46,7 +46,8 @@ BuildProbe::~BuildProbe() {
 void BuildProbe::execute() {
 
 #ifdef MEASUREMENT_DETAILS_LOCALBP
-	enclave::performance::Measurements::startBuildProbeTask();
+    ocall_startBuildProbeTask();
+	//enclave::performance::Measurements::startBuildProbeTask();
 #endif
 
 	JOIN_DEBUG("Build-Probe", "Executing build-probe phase of size %lu x %lu", innerPartitionSize, outerPartitionSize);
@@ -60,21 +61,24 @@ void BuildProbe::execute() {
 	uint64_t const MASK = (N-1) << (shiftBits);
 
 #ifdef MEASUREMENT_DETAILS_LOCALBP
-	enclave::performance::Measurements::startBuildProbeMemoryAllocation();
+	ocall_startBuildProbeMemoryAllocation();
+	//enclave::performance::Measurements::startBuildProbeMemoryAllocation();
 #endif
 
 	uint64_t *hashTableNext = (uint64_t*) calloc(this->innerPartitionSize, sizeof(uint64_t));
 	uint64_t *hashTableBucket = (uint64_t*) calloc(N, sizeof(uint64_t));
 
 #ifdef MEASUREMENT_DETAILS_LOCALBP
-	enclave::performance::Measurements::stopBuildProbeMemoryAllocation(this->innerPartitionSize);
+	ocall_stopBuildProbeMemoryAllocation(this->innerPartitionSize);
+	//enclave::performance::Measurements::stopBuildProbeMemoryAllocation(this->innerPartitionSize);
 #endif
 
 
 	// Build hash table
 
 #ifdef MEASUREMENT_DETAILS_LOCALBP
-	enclave::performance::Measurements::startBuildProbeBuild();
+    ocall_startBuildProbeBuild();
+	//enclave::performance::Measurements::startBuildProbeBuild();
 #endif
 
 	for (uint64_t t=0; t<this->innerPartitionSize;) {
@@ -84,13 +88,15 @@ void BuildProbe::execute() {
 	}
 
 #ifdef MEASUREMENT_DETAILS_LOCALBP
-	enclave::performance::Measurements::stopBuildProbeBuild(this->innerPartitionSize);
+ocall_stopBuildProbeBuild(this->innerPartitionSize);
+	//enclave::performance::Measurements::stopBuildProbeBuild(this->innerPartitionSize);
 #endif
 
 	// Probe hash table
 
 #ifdef MEASUREMENT_DETAILS_LOCALBP
-	enclave::performance::Measurements::startBuildProbeProbe();
+ocall_startBuildProbeProbe();
+	//enclave::performance::Measurements::startBuildProbeProbe();
 #endif
 
 	uint64_t matches = 0;
@@ -104,7 +110,8 @@ void BuildProbe::execute() {
 	}
 
 #ifdef MEASUREMENT_DETAILS_LOCALBP
-	enclave::performance::Measurements::stopBuildProbeProbe(this->outerPartitionSize);
+	ocall_stopBuildProbeProbe(this->outerPartitionSize);
+	//enclave::performance::Measurements::stopBuildProbeProbe(this->outerPartitionSize);
 #endif
 
 	free(hashTableNext);
@@ -113,7 +120,8 @@ void BuildProbe::execute() {
 	hpcjoin::operators::HashJoin::RESULT_COUNTER += matches;
 
 #ifdef MEASUREMENT_DETAILS_LOCALBP
-	enclave::performance::Measurements::stopBuildProbeTask();
+	ocall_stopBuildProbeTask();
+	//enclave::performance::Measurements::stopBuildProbeTask();
 #endif
 
 }

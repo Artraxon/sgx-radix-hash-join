@@ -10,9 +10,9 @@
 #include <errno.h>
 #include <stdio.h>
 #include <mpi.h>
+#include <Enclave_t.h>
 
 #include <core/Configuration.h>
-#include <performance/Measurements.h>
 
 namespace hpcjoin {
 namespace histograms {
@@ -35,7 +35,8 @@ LocalHistogram::~LocalHistogram() {
 void LocalHistogram::computeLocalHistogram() {
 
 #ifdef MEASUREMENT_DETAILS_HISTOGRAM
-	enclave::performance::Measurements::startHistogramLocalHistogramComputation();
+    ocall_startHistogramLocalHistogramComputation();
+	//enclave::performance::Measurements::startHistogramLocalHistogramComputation();
 #endif
 
 	uint64_t const numberOfElements = relation->getLocalSize();
@@ -47,7 +48,8 @@ void LocalHistogram::computeLocalHistogram() {
 	}
 
 #ifdef MEASUREMENT_DETAILS_HISTOGRAM
-	enclave::performance::Measurements::stopHistogramLocalHistogramComputation(numberOfElements);
+	ocall_stopHistogramLocalHistogramComputation(numberOfElements);
+	//enclave::performance::Measurements::stopHistogramLocalHistogramComputation(numberOfElements);
 #endif
 
 }
