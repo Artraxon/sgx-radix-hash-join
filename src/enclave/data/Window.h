@@ -24,7 +24,8 @@ class Window {
 
 public:
 
-	Window(uint32_t numberOfNodes, uint32_t nodeId, uint32_t *assignment, uint64_t *localHistogram, uint64_t *globalHistogram, uint64_t *baseOffsets, uint64_t *writeOffsets);
+    Window(uint32_t numberOfNodes, uint32_t nodeId, uint32_t* assignment, uint64_t* localHistogram, uint64_t* globalHistogram, uint64_t* baseOffsets, uint64_t* writeOffsets,
+                   uint64_t* sgxLocalHistogram, uint64_t* sgxGlobalHistogram, uint64_t* sgxBaseOffsets, uint64_t* sgxWriteOffsets);
 	~Window();
 
 public:
@@ -54,11 +55,13 @@ protected:
 
 	uint64_t localWindowSize;
 	hpcjoin::data::CompressedTuple *data;
+	void* encryptedData;
+	uint16_t winNr;
 
 	#ifdef USE_FOMPI
-	foMPI_Win *window;
+	//foMPI_Win *window;
 	#else
-	MPI_Win *window;
+	//MPI_Win *window;
 	#endif
 
 
@@ -72,10 +75,12 @@ protected:
 	uint64_t *globalHistogram;
 	uint64_t *baseOffsets;
 	uint64_t *writeOffsets;
+    uint64_t* sgxLocalHistogram;
+    uint64_t* sgxGlobalHistogram;
+    uint64_t* sgxBaseOffsets;
+    uint64_t* sgxWriteOffsets;
 
-protected:
-
-	uint64_t *writeCounters;
+    uint64_t *writeCounters;
 
 };
 

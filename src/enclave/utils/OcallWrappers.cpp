@@ -37,3 +37,20 @@ void fprintf(const int FILE, const char *format, ...){
 void fflush(const int FILE){
     ocall_fflush(FILE);
 }
+void oc_MPI_send(void* buf, size_t len, int source, int tag){
+    void* ptr;
+    ocall_calloc_heap(&ptr, len);
+    //TODO sealing
+    memccpy(ptr, buf, len);
+    ocall_MPI_send(ptr, len, source, tag);
+    ocall_free(ptr);
+}
+
+void oc_MPI_recv(void* buf, size_t len, int source, int tag){
+    void* ptr;
+    ocall_calloc_heap(&ptr, len);
+    ocall_MPI_recv(ptr, len, source, tag);
+    //TODO unsealing
+    memccpy(buf, ptr, len);
+    ocall_free(ptr);
+}

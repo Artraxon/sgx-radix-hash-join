@@ -15,7 +15,8 @@
 namespace hpcjoin {
 namespace data {
 
-Window::Window(uint32_t numberOfNodes, uint32_t nodeId, uint32_t* assignment, uint64_t* localHistogram, uint64_t* globalHistogram, uint64_t* baseOffsets, uint64_t* writeOffsets) {
+Window::Window(uint32_t numberOfNodes, uint32_t nodeId, uint32_t* assignment, uint64_t* localHistogram, uint64_t* globalHistogram, uint64_t* baseOffsets, uint64_t* writeOffsets,
+               uint64_t* sgxLocalHistogram, uint64_t* sgxGlobalHistogram, uint64_t* sgxBaseOffsets, uint64_t* sgxWriteOffsets) {
 
 	this->numberOfNodes = numberOfNodes;
 	this->nodeId = nodeId;
@@ -24,9 +25,18 @@ Window::Window(uint32_t numberOfNodes, uint32_t nodeId, uint32_t* assignment, ui
 	this->globalHistogram = globalHistogram;
 	this->baseOffsets = baseOffsets;
 	this->writeOffsets = writeOffsets;
+
+	this->sgxLocalHistogram = sgxLocalHistogram;
+	this->sgxGlobalHistogram = sgxGlobalHistogram;
+	this->sgxBaseOffsets = sgxBaseOffsets;
+	this->sgxWriteOffsets = sgxWriteOffsets;
+
 	this->writeCounters = (uint64_t *) calloc(hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT, sizeof(uint64_t));
 	this->localWindowSize = computeLocalWindowSize();
 
+
+    ocall_init_MPI_Window(localWindowSize * sizeof(hpcjoin::data::CompressedTuple), &this->encryptedData, &winNr);
+/*
 	#ifdef USE_FOMPI
 	this->window = (foMPI_Win *) calloc(1, sizeof(foMPI_Win));
 	#else
@@ -34,7 +44,7 @@ Window::Window(uint32_t numberOfNodes, uint32_t nodeId, uint32_t* assignment, ui
 	#endif
 
 
-	MPI_Alloc_mem(localWindowSize * sizeof(hpcjoin::data::CompressedTuple), MPI_INFO_NULL, &(this->data));
+    ocall_MPI_alloc(localWindowSize * sizeof(hpcjoin::data::CompressedTuple), reinterpret_cast<void **>(&(this->data)));
 	#ifdef USE_FOMPI
 	foMPI_Win_create(this->data, localWindowSize * sizeof(enclave::data::CompressedTuple), 1, MPI_INFO_NULL, MPI_COMM_WORLD, window);
 	#else
@@ -42,40 +52,48 @@ Window::Window(uint32_t numberOfNodes, uint32_t nodeId, uint32_t* assignment, ui
 	#endif
 
 	JOIN_DEBUG("Window", "Window is at address %p to %p", this->data, this->data + localWindowSize);
+*/
 
 }
 
 Window::~Window() {
+    ocall_destroy_MPI_Window(winNr);
+/*
 	#ifdef USE_FOMPI
 	foMPI_Win_free(window);
 	#else
 	MPI_Win_free(window);
 	#endif
 	MPI_Free_mem(data);
+*/
 
 	free(this->writeCounters);
-	free(this->window);
+	//free(this->window);
 
 }
 
 void Window::start() {
 
 	JOIN_DEBUG("Window", "Starting window");
+/*
 	#ifdef USE_FOMPI
 	foMPI_Win_lock_all(0, *window);
 	#else
-	MPI_Win_lock_all(0, *window);
-	#endif
+*/
+	ocall_MPI_Win_lock_all(0, winNr);
+	//#endif
 
 }
 
 void Window::stop() {
 	JOIN_DEBUG("Window", "Stopping window");
+/*
 	#ifdef USE_FOMPI
 	foMPI_Win_unlock_all(*window);
 	#else
-	MPI_Win_unlock_all(*window);
-	#endif
+*/
+	ocall_MPI_Win_unlock_all(winNr);
+	//#endif
 
 }
 

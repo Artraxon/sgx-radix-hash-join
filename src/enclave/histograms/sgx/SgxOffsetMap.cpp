@@ -4,8 +4,7 @@
  *
  */
 
-#include "OffsetMap.h"
-#include "../../shared/core/Configuration.h"
+#include "SgxOffsetMap.h"
 
 #include <stdlib.h>
 #include <mpi.h>
@@ -16,7 +15,7 @@
 namespace hpcjoin {
 namespace histograms {
 
-OffsetMap::OffsetMap(uint32_t numberOfProcesses, LocalHistogram* localHistogram, GlobalHistogram* globalHistogram, AssignmentMap* assignment) {
+SgxOffsetMap::SgxOffsetMap(uint32_t numberOfProcesses, SgxLocalHistogram* localHistogram, SgxGlobalHistogram* globalHistogram, AssignmentMap* assignment) {
 
 	this->numberOfProcesses = numberOfProcesses;
 	this->localHistogram = localHistogram;
@@ -26,20 +25,18 @@ OffsetMap::OffsetMap(uint32_t numberOfProcesses, LocalHistogram* localHistogram,
 	this->baseOffsets = (uint64_t *) calloc(hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT, sizeof(uint64_t));
 	this->relativeWriteOffsets = (uint64_t *) calloc(hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT, sizeof(uint64_t));
 	this->absoluteWriteOffsets = (uint64_t *) calloc(hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT, sizeof(uint64_t));
-	this->localOffsets = (uint64_t *) calloc(hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT, sizeof(uint64_t));
 
 }
 
-OffsetMap::~OffsetMap() {
+SgxOffsetMap::~SgxOffsetMap() {
 
 	free(this->baseOffsets);
 	free(this->relativeWriteOffsets);
 	free(this->absoluteWriteOffsets);
-	free(this->localOffsets);
 
 }
 
-void OffsetMap::computeOffsets() {
+void SgxOffsetMap::computeOffsets() {
 
 #ifdef MEASUREMENT_DETAILS_HISTOGRAM
     ocall_startHistogramOffsetComputation();
@@ -49,7 +46,6 @@ void OffsetMap::computeOffsets() {
 	computeBaseOffsets();
 	computeRelativePrivateOffsets();
 	computeAbsolutePrivateOffsets();
-	computeLocalOffsets();
 
 #ifdef MEASUREMENT_DETAILS_HISTOGRAM
 	ocall_stopHistogramOffsetComputation();
@@ -58,7 +54,7 @@ void OffsetMap::computeOffsets() {
 
 }
 
-void OffsetMap::computeBaseOffsets() {
+void SgxOffsetMap::computeBaseOffsets() {
 
 	uint64_t *currentOffsets = (uint64_t *) calloc(this->numberOfProcesses, sizeof(uint64_t));
 	uint32_t *partitionAssignment = this->assignment->getPartitionAssignment();
@@ -74,10 +70,9 @@ void OffsetMap::computeBaseOffsets() {
 
 }
 
-void OffsetMap::computeRelativePrivateOffsets() {
+void SgxOffsetMap::computeRelativePrivateOffsets() {
 
-	MPI_Scan(this->localHistogram->getLocalHistogram(), this->relativeWriteOffsets, hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT, MPI_UINT64_T, MPI_SUM,
-			MPI_COMM_WORLD);
+    ocall_MPI_scan_sum(this->localHistogram->getLocalHistogram(), this->relativeWriteOffsets, hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT);
 
 	uint64_t *histogram = this->localHistogram->getLocalHistogram();
 	for (uint32_t i = 0; i < hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT; ++i) {
@@ -86,7 +81,7 @@ void OffsetMap::computeRelativePrivateOffsets() {
 
 }
 
-void OffsetMap::computeAbsolutePrivateOffsets() {
+void SgxOffsetMap::computeAbsolutePrivateOffsets() {
 
 	for (uint32_t i = 0; i < hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT; ++i) {
 		this->absoluteWriteOffsets[i] = this->baseOffsets[i] + this->relativeWriteOffsets[i];
@@ -94,37 +89,25 @@ void OffsetMap::computeAbsolutePrivateOffsets() {
 
 }
 
-void OffsetMap::computeLocalOffsets() {
-
-    //First entry is omitted since the offset has to be zero
-    for(uint32_t i = 1; i < hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT; ++i){
-        this->localOffsets[i] = this->localOffsets[i - 1] + this->localHistogram->getLocalHistogram()[i - 1];
-    }
-}
-
-uint64_t* OffsetMap::getBaseOffsets() {
+uint64_t* SgxOffsetMap::getBaseOffsets() {
 
 	return baseOffsets;
 
 }
 
-uint64_t* OffsetMap::getRelativeWriteOffsets() {
+uint64_t* SgxOffsetMap::getRelativeWriteOffsets() {
 
 	return relativeWriteOffsets;
 
 }
 
-uint64_t* OffsetMap::getAbsoluteWriteOffsets() {
+uint64_t* SgxOffsetMap::getAbsoluteWriteOffsets() {
 
 	return absoluteWriteOffsets;
 
 }
-uint64_t* OffsetMap::getLocalOffsets(){
 
-    return localOffsets;
-}
-
-uint64_t * OffsetMap::getLocalHistogram(){
+uint64_t * SgxOffsetMap::getLocalHistogram(){
     return this->localHistogram->getLocalHistogram();
 }
 

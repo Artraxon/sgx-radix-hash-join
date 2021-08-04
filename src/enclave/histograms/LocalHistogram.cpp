@@ -13,6 +13,7 @@
 #include <Enclave_t.h>
 
 #include <core/Configuration.h>
+#include <histograms/sgx/SgxLocalHistogram.h>
 
 namespace hpcjoin {
 namespace histograms {
@@ -58,6 +59,9 @@ uint64_t* LocalHistogram::getLocalHistogram() {
 
 	return this->values;
 
+}
+hpcjoin::data::Relation* LocalHistogram::getRelation(){
+    return this->relation;
 }
 
 } /* namespace histograms */

@@ -5,23 +5,23 @@
  */
 
 #ifndef HPCJOIN_HISTOGRAMS_OFFSETMAP_H_
-#define HPCJOIN_HISTOGRAMS_OFFSETMAP_H_
+#define HPCJOIN_HISTOGRAMS_SGXOFFSETMAP_H_
 
 #include <stdint.h>
 
-#include <histograms/LocalHistogram.h>
-#include <histograms/GlobalHistogram.h>
+#include <histograms/sgx/SgxLocalHistogram.h>
+#include <histograms/sgx/SgxGlobalHistogram.h>
 #include <histograms/AssignmentMap.h>
 
 namespace hpcjoin {
 namespace histograms {
 
-class OffsetMap {
+class SgxOffsetMap {
 
 public:
 
-	OffsetMap(uint32_t numberOfProcesses, hpcjoin::histograms::LocalHistogram *localHistogram, hpcjoin::histograms::GlobalHistogram *globalHistogram, hpcjoin::histograms::AssignmentMap *assignment);
-	~OffsetMap();
+	SgxOffsetMap(uint32_t numberOfProcesses, hpcjoin::histograms::SgxLocalHistogram *localHistogram, hpcjoin::histograms::SgxGlobalHistogram *globalHistogram, hpcjoin::histograms::AssignmentMap *assignment);
+	~SgxOffsetMap();
 
 public:
 
@@ -32,7 +32,6 @@ public:
 	uint64_t *getBaseOffsets();
 	uint64_t *getRelativeWriteOffsets();
 	uint64_t *getAbsoluteWriteOffsets();
-	uint64_t *getLocalOffsets();
 	uint64_t * getLocalHistogram();
 
 protected:
@@ -40,19 +39,17 @@ protected:
 	void computeBaseOffsets();
 	void computeRelativePrivateOffsets();
 	void computeAbsolutePrivateOffsets();
-	void computeLocalOffsets();
 
 protected:
 
 	uint32_t numberOfProcesses;
-	hpcjoin::histograms::LocalHistogram *localHistogram;
-	hpcjoin::histograms::GlobalHistogram *globalHistogram;
+	hpcjoin::histograms::SgxLocalHistogram *localHistogram;
+	hpcjoin::histograms::SgxGlobalHistogram *globalHistogram;
 	hpcjoin::histograms::AssignmentMap *assignment;
 
 	uint64_t *baseOffsets;
 	uint64_t *relativeWriteOffsets;
 	uint64_t *absoluteWriteOffsets;
-	uint64_t *localOffsets;
 
 
 };

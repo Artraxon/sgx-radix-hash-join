@@ -11,7 +11,7 @@ ROOT_DIR			:= $(shell pwd)
 MPI_FOLDER			= /usr
 COMPILER_FLAGS 		= -O3 -std=c++0x -mavx -lpthread -lpapi -D MEASUREMENT_DETAILS_HISTOGRAM -D MEASUREMENT_DETAILS_NETWORK -D MEASUREMENT_DETAILS_LOCALPART -D MEASUREMENT_DETAILS_LOCALBP
 PAPI_FOLDER			= /bin
-CC					= $(MPI_FOLDER)/bin/mpic++
+CC					= /usr/bin/gcc
 CXX					= $(CC)
 MPICXX				= $(MPI_FOLDER)/bin/mpic++
 
@@ -277,22 +277,22 @@ generated/untrusted/Enclave_u.h: $(SGX_EDGER8R) src/enclave/Enclave.edl
 generated/untrusted/Enclave_u.c: generated/untrusted/Enclave_u.h
 
 generated/untrusted/Enclave_u.o: generated/untrusted/Enclave_u.c
-	$(CC) $(SGX_COMMON_CFLAGS) $(App_Cpp_Flags) $(COMPILER_FLAGS) -c $< -o $@
+	$(MPICXX) $(SGX_COMMON_CFLAGS) $(App_Cpp_Flags) $(COMPILER_FLAGS) -c $< -o $@
 	@echo "CC   <=  $<"
 
 build/untrusted/%.o: src/untrusted/%.cpp generated/untrusted/Enclave_u.h
 	mkdir -p $(@D)
-	$(MPI_FOLDER)/bin/mpic++ $(SGX_COMMON_CXXFLAGS) $(App_Cpp_Flags) $(COMPILER_FLAGS) -c $< -I $(ROOT_DIR)/src/untrusted -I $(PAPI_FOLDER) -I $(ROOT_DIR)/generated/untrusted -I $(ROOT_DIR)/src/shared -o $@
+	$(MPICXX) $(SGX_COMMON_CXXFLAGS) $(App_Cpp_Flags) $(COMPILER_FLAGS) -c $< -I $(ROOT_DIR)/src/untrusted -I $(PAPI_FOLDER) -I $(ROOT_DIR)/generated/untrusted -I $(ROOT_DIR)/src/shared -o $@
 
 build/untrusted/%.o: src/untrusted/%.c generated/untrusted/Enclave_u.h
 	mkdir -p $(@D)
-	$(MPI_FOLDER)/bin/mpic++ $(SGX_COMMON_CXXFLAGS) $(App_Cpp_Flags) $(COMPILER_FLAGS) -c $< -I $(ROOT_DIR)/src/untrusted -I $(PAPI_FOLDER) -I $(ROOT_DIR)/generated/untrusted -I $(ROOT_DIR)/src/shared -o $@
+	$(MPICXX) $(SGX_COMMON_CXXFLAGS) $(App_Cpp_Flags) $(COMPILER_FLAGS) -c $< -I $(ROOT_DIR)/src/untrusted -I $(PAPI_FOLDER) -I $(ROOT_DIR)/generated/untrusted -I $(ROOT_DIR)/src/shared -o $@
 
 $(App_Name): generated/untrusted/Enclave_u.o $(App_Cpp_Objects)
 	mkdir -p $(RELEASE_FOLDER)
 	@echo "Enter: LINK =>  $@"
 	@echo "CPP Objects: $(App_Cpp_Objects)"
-	$(CXX) $^ -o $(RELEASE_FOLDER)/$@ $(App_Link_Flags)
+	$(MPICXX) $^ -o $(RELEASE_FOLDER)/$@ $(App_Link_Flags)
 	@echo "LINK =>  $@"
 
 

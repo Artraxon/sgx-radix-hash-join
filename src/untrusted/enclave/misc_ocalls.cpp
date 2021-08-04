@@ -3,10 +3,11 @@
 //
 
 #include <Enclave_u.h>
-#include <stdlib.h>
 #include <cstdlib>
 #include <cstdio>
 #include <unistd.h>
+#include <cstring>
+#include <mpi/mpi.h>
 
 uint64_t ocall_rand(){
     return rand();
@@ -36,3 +37,13 @@ void ocall_gethostname(char *name, int len){
 void ocall_srand(uint64_t seed){
     srand(seed);
 }
+
+void ocall_calloc_heap(void** ptr, u_int64_t size){
+    void* created = calloc(size, 1);
+    *ptr = created;
+}
+
+void ocall_free(void* ptr){
+    free(ptr);
+}
+

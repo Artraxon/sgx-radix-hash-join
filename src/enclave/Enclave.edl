@@ -53,6 +53,21 @@ untrusted {
         *  [string]: specifies 'str' is a NULL terminated buffer.
         */
 
+    /**
+     * MPI Communication
+    */
+    void ocall_MPI_send([user_check] void* buf, size_t len, int source, int tag);
+    void ocall_MPI_recv([user_check] void* buf, size_t len, int source, int tag);
+    void ocall_calloc_heap([out, count=1] void** ptr, uint64_t size);
+    void ocall_free([user_check] void *ptr);
+    void ocall_MPI_allreduce_sum([in, count=len] uint64_t* local_histogram, [out, count=len] uint64_t* global_histogram, uint32_t len);
+    void ocall_MPI_scan_sum([in, count=len] uint64_t* local_histogram, [out, count=len] uint64_t* global_histogram, uint32_t len);
+    void ocall_init_MPI_Window(uint64_t len, [out, count=1] void** ptr, [out, count=1]uint16_t* windowNr);
+    void ocall_destroy_MPI_Window(uint16_t windowNr);
+    void ocall_MPI_Win_lock_all(int assert, uint16_t windowNr);
+    void ocall_MPI_Win_unlock_all(uint16_t windowNr);
+
+
 	/**
 	 * Timings for section
 	 */

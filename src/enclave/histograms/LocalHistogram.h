@@ -25,6 +25,8 @@ public:
 
 	uint64_t *getLocalHistogram();
 
+	hpcjoin::data::Relation* getRelation();
+
 protected:
 
 	hpcjoin::data::Relation *relation;
