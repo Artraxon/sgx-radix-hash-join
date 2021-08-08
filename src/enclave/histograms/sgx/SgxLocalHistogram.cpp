@@ -19,16 +19,19 @@ namespace hpcjoin {
 namespace histograms {
 
 
-SgxLocalHistogram::SgxLocalHistogram(hpcjoin::histograms::LocalHistogram* localHistogram) {
+SgxLocalHistogram::SgxLocalHistogram(uint64_t * localHistogram, uint32_t numberOfNodes, uint64_t localSize) {
 
+    this->localSize = localSize;
 	this->localHistogram = localHistogram;
+	this->numberOfNodes = numberOfNodes;
+
 	this->values = (uint64_t *) calloc(hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT, sizeof(uint64_t));
 
 }
 
 SgxLocalHistogram::~SgxLocalHistogram() {
 
-	free(values);
+	free(this->values);
 
 }
 
@@ -39,13 +42,14 @@ void SgxLocalHistogram::computeLocalHistogram() {
 	//enclave::performance::Measurements::startHistogramSgxLocalHistogramComputation();
 #endif
 
-
 	for (uint32_t i = 0; i < hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT; ++i) {
-	    values[i] = sgx_calc_sealed_data_size(0, localHistogram->getLocalHistogram()[i] * sizeof(uint64_t));
+	    values[i] = sgx_calc_sealed_data_size(0, localHistogram[i] * sizeof(uint64_t));
 	}
 
+
+
 #ifdef MEASUREMENT_DETAILS_HISTOGRAM
-	ocall_stopHistogramLocalHistogramComputation(this->localHistogram->getRelation()->getLocalSize());
+	ocall_stopHistogramLocalHistogramComputation(this->localSize);
 	//enclave::performance::Measurements::stopHistogramSgxLocalHistogramComputation(numberOfElements);
 #endif
 

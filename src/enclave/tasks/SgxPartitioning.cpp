@@ -43,9 +43,9 @@ typedef union {
 
 } cacheline_t;
 
+//Doesn't need SgxOffsets since the Window Class takes care of that
 SgxPartitioning::SgxPartitioning(uint32_t nodeId, hpcjoin::data::Relation* innerRelation, hpcjoin::data::Relation* outerRelation, hpcjoin::data::Window* innerWindow,
-                                 hpcjoin::data::Window* outerWindow, hpcjoin::histograms::OffsetMap* innerOffsets, hpcjoin::histograms::OffsetMap* outerOffsets,
-                                 hpcjoin::histograms::SgxOffsetMap* innerSgxOffsets, hpcjoin::histograms::SgxOffsetMap* outerSgxOffsets) {
+                                 hpcjoin::data::Window* outerWindow, uint64_t * innerOffsets, uint64_t * outerOffsets) {
 
 	this->nodeId = nodeId;
 
@@ -68,23 +68,23 @@ SgxPartitioning::~SgxPartitioning() {
 void SgxPartitioning::execute() {
 
 	JOIN_DEBUG("Network Partitioning", "Node %d is partitioning inner relation", this->nodeId);
-	partition(innerRelation, innerWindow, innerOffsets, innerSgxOffsets);
+	partition(innerRelation, innerWindow, innerOffsets);
 
 	JOIN_DEBUG("Network Partitioning", "Node %d is partitioning outer relation", this->nodeId);
-	partition(outerRelation, outerWindow, outerOffsets, outerSgxOffsets);
+	partition(outerRelation, outerWindow, outerOffsets);
 
 }
 
 void SgxPartitioning::partition(hpcjoin::data::Relation *relation,
                                 hpcjoin::data::Window *window,
-                                hpcjoin::histograms::OffsetMap* offsets,
-                                hpcjoin::histograms::SgxOffsetMap* sgxOffsets){
+                                uint64_t * offsets){
 
     window->start();
 
 	uint64_t const numberOfElements = relation->getLocalSize();
 	hpcjoin::data::Tuple * const data = relation->getData();
-	uint64_t* localCounter = (uint64_t *) calloc(hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT, sizeof(uint64_t));
+	uint64_t localCounter[hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT];
+	std::fill(localCounter, localCounter + hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT, 0);
 
 	// Create in-memory buffer
 	uint64_t const bufferedPartitionCount = hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT;
@@ -95,128 +95,46 @@ void SgxPartitioning::partition(hpcjoin::data::Relation *relation,
 
 #ifdef MEASUREMENT_DETAILS_NETWORK
 	ocall_startNetworkPartitioningMemoryAllocation();
-	//enclave::performance::Measurements::startNetworkPartitioningMemoryAllocation();
 #endif
 
-	char * inMemoryBuffer = (char *) calloc(offsets->getLocalOffsets()[hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT - 1],
+	hpcjoin::data::CompressedTuple* inMemoryBuffer = (hpcjoin::data::CompressedTuple *) calloc(offsets[hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT - 1],
                                             sizeof(hpcjoin::data::CompressedTuple));
 
     JOIN_ASSERT(inMemoryBuffer != NULL, "Network Partitioning", "Could not allocate in-memory buffer");
-    /*
-        int result = posix_memalign((void **) &(inMemoryBuffer), NETWORK_PARTITIONING_CACHELINE_SIZE, inMemoryBufferSize);
-
-        JOIN_ASSERT(result == 0, "Network Partitioning", "Could not allocate in-memory buffer");
-        memset(inMemoryBuffer, 0, inMemoryBufferSize);
-    */
 
 
 #ifdef MEASUREMENT_DETAILS_NETWORK
 	ocall_stopNetworkPartitioningMemoryAllocation(inMemoryBufferSize);
-	//enclave::performance::Measurements::stopNetworkPartitioningMemoryAllocation(inMemoryBufferSize);
+    ocall_startNetworkPartitioningMainPartitioning();
 #endif
-
-	// Create in-cache buffer
-	cacheline_t inCacheBuffer[hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT] __attribute__((aligned(NETWORK_PARTITIONING_CACHELINE_SIZE)));;
-
 	JOIN_DEBUG("Network Partitioning", "Node %d is setting counter to zero", this->nodeId);
-	for (uint32_t p = 0; p < hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT; ++p) {
-		inCacheBuffer[p].data.inCacheCounter = 0;
-		inCacheBuffer[p].data.memoryCounter = 0;
-	}
-
-#ifdef MEASUREMENT_DETAILS_NETWORK
-	ocall_startNetworkPartitioningMainPartitioning();
-	//enclave::performance::Measurements::startNetworkPartitioningMainPartitioning();
-#endif
 
 	for (uint64_t i = 0; i < numberOfElements; ++i) {
 
 		// Compute partition
 		uint32_t partitionId = HASH_BIT_MODULO(data[i].key, hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT - 1, 0);
 
-		// Save counter to register
-		//uint32_t inCacheCounter = inCacheBuffer[partitionId].data.inCacheCounter;
-		//uint32_t memoryCounter = inCacheBuffer[partitionId].data.memoryCounter;
 
 		// Move data to cache line
-		hpcjoin::data::CompressedTuple *cacheLine = (hpcjoin::data::CompressedTuple *) (inMemoryBuffer + offsets->getLocalOffsets()[partitionId] + localCounter[partitionId]);
+		hpcjoin::data::CompressedTuple* cacheLine = (hpcjoin::data::CompressedTuple *) (inMemoryBuffer + offsets[partitionId] + localCounter[partitionId]);
 		//cacheLine[inCacheCounter] = data[i];
 		cacheLine->value = data[i].rid + ((data[i].key >> partitionBits) << (partitionBits + hpcjoin::core::Configuration::PAYLOAD_BITS));
 		++localCounter[partitionId];
-
-
-		// Check if cache line is full
-/*
-		if (localCounter[partitionId] == TUPLES_PER_CACHELINE) {
-
-			//JOIN_DEBUG("Network Partitioning", "Node %d has a full cache line %d", this->nodeId, partitionId);
-
-			// Move cache line to memory buffer
-			char *inMemoryStreamDestination = PARTITION_ACCESS(partitionId) + (memoryCounter * NETWORK_PARTITIONING_CACHELINE_SIZE);
-			streamWrite(inMemoryStreamDestination, cacheLine);
-			++memoryCounter;
-
-			//JOIN_DEBUG("Network Partitioning", "Node %d has completed the stream write of cache line %d", this->nodeId, partitionId);
-
-			// Check if memory buffer is full
-			if (memoryCounter % hpcjoin::core::Configuration::CACHELINES_PER_MEMORY_BUFFER == 0) {
-
-				bool rewindBuffer = (memoryCounter == hpcjoin::core::Configuration::MEMORY_BUFFERS_PER_PARTITION * hpcjoin::core::Configuration::CACHELINES_PER_MEMORY_BUFFER);
-
-				//JOIN_DEBUG("Network Partitioning", "Node %d has a full memory buffer %d", this->nodeId, partitionId);
-				hpcjoin::data::CompressedTuple *inMemoryBufferLocation = reinterpret_cast<hpcjoin::data::CompressedTuple *>(PARTITION_ACCESS(partitionId) + (memoryCounter * NETWORK_PARTITIONING_CACHELINE_SIZE) - (hpcjoin::core::Configuration::MEMORY_BUFFER_SIZE_BYTES));
-				window->write(partitionId, inMemoryBufferLocation, hpcjoin::core::Configuration::CACHELINES_PER_MEMORY_BUFFER * TUPLES_PER_CACHELINE, rewindBuffer);
-
-				if(rewindBuffer) {
-					memoryCounter = 0;
-				}
-
-				//JOIN_DEBUG("Network Partitioning", "Node %d has completed the put operation of memory buffer %d", this->nodeId, partitionId);
-			}
-
-			inCacheCounter = 0;
-		}
-
-		inCacheBuffer[partitionId].data.inCacheCounter = inCacheCounter;
-		inCacheBuffer[partitionId].data.memoryCounter = memoryCounter;
-*/
-
 	}
 
 #ifdef MEASUREMENT_DETAILS_NETWORK
-ocall_stopNetworkPartitioningMainPartitioning(numberOfElements);
-	//enclave::performance::Measurements::stopNetworkPartitioningMainPartitioning(numberOfElements);
+    ocall_stopNetworkPartitioningMainPartitioning(numberOfElements);
+    ocall_startNetworkPartitioningFlushPartitioning();
 #endif
 
-	JOIN_DEBUG("Network Partitioning", "Node %d is flushing remaining tuples", this->nodeId);
+    JOIN_DEBUG("Network Partitioning", "Node %d is flushing remaining tuples", this->nodeId);
 
-#ifdef MEASUREMENT_DETAILS_NETWORK
-	ocall_startNetworkPartitioningFlushPartitioning();
-	//enclave::performance::Measurements::startNetworkPartitioningFlushPartitioning();
-#endif
-
-
-
-	// Flush remaining elements to memory buffers
-	for(uint32_t p=0; p<hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT; ++p) {
-
-		uint32_t inCacheCounter = inCacheBuffer[p].data.inCacheCounter;
-		uint32_t memoryCounter = inCacheBuffer[p].data.memoryCounter;
-
-		hpcjoin::data::CompressedTuple *cacheLine = (hpcjoin::data::CompressedTuple *) (inCacheBuffer + p);
-		hpcjoin::data::CompressedTuple *inMemoryFreeSpace = reinterpret_cast<hpcjoin::data::CompressedTuple *>(PARTITION_ACCESS(p) + (memoryCounter * NETWORK_PARTITIONING_CACHELINE_SIZE));
-		for(uint32_t t=0; t<inCacheCounter; ++t) {
-				inMemoryFreeSpace[t] = cacheLine[t];
-		}
-
-		uint32_t remainingTupleInMemory = ((memoryCounter % hpcjoin::core::Configuration::CACHELINES_PER_MEMORY_BUFFER) * TUPLES_PER_CACHELINE) + inCacheCounter;
-
-		if(remainingTupleInMemory > 0) {
-			hpcjoin::data::CompressedTuple *inMemoryBufferOfPartition = reinterpret_cast<hpcjoin::data::CompressedTuple *>(PARTITION_ACCESS(p) + (memoryCounter/hpcjoin::core::Configuration::CACHELINES_PER_MEMORY_BUFFER) * hpcjoin::core::Configuration::MEMORY_BUFFER_SIZE_BYTES);
-			window->write(p, inMemoryBufferOfPartition, remainingTupleInMemory, false);
-		}
-
-	}
+    uint64_t currentOffset = 0;
+    for (int p = 0; p < hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT; ++p) {
+        hpcjoin::data::CompressedTuple* currentPartition = ((hpcjoin::data::CompressedTuple *) inMemoryBuffer) + currentOffset;
+        window->write(p, currentPartition, localCounter[p], false);
+        currentOffset += localCounter[p];
+    }
 
 	window->flush();
 	window->stop();
@@ -225,46 +143,12 @@ ocall_stopNetworkPartitioningMainPartitioning(numberOfElements);
 
 #ifdef MEASUREMENT_DETAILS_NETWORK
 	ocall_stopNetworkPartitioningFlushPartitioning();
-	//enclave::performance::Measurements::stopNetworkPartitioningFlushPartitioning();
 #endif
 
 	window->assertAllTuplesWritten();
 
 }
 
-inline void SgxPartitioning::streamWrite(void* to, void* from) {
-
-	JOIN_ASSERT(to != NULL, "Network Partitioning", "Stream destination should not be NULL");
-	JOIN_ASSERT(from != NULL, "Network Partitioning", "Stream source should not be NULL");
-
-	JOIN_ASSERT(((uint64_t) to) % NETWORK_PARTITIONING_CACHELINE_SIZE == 0, "Network Partitioning", "Stream destination not aligned");
-	JOIN_ASSERT(((uint64_t) from) % NETWORK_PARTITIONING_CACHELINE_SIZE == 0, "Network Partitioning", "Stream source not aligned");
-
-	register __m256i * d1 = (__m256i *) to;
-	register __m256i s1 = *((__m256i *) from);
-	register __m256i * d2 = d1 + 1;
-	register __m256i s2 = *(((__m256i *) from) + 1);
-
-	_mm256_stream_si256(d1, s1);
-	_mm256_stream_si256(d2, s2);
-
-	/*
-    register __m128i * d1 = (__m128i*) to;
-    register __m128i * d2 = d1+1;
-    register __m128i * d3 = d1+2;
-    register __m128i * d4 = d1+3;
-    register __m128i s1 = *(__m128i*) from;
-    register __m128i s2 = *((__m128i*)from + 1);
-    register __m128i s3 = *((__m128i*)from + 2);
-    register __m128i s4 = *((__m128i*)from + 3);
-
-    _mm_stream_si128 (d1, s1);
-    _mm_stream_si128 (d2, s2);
-    _mm_stream_si128 (d3, s3);
-    _mm_stream_si128 (d4, s4);
-    */
-
-}
 
 task_type_t SgxPartitioning::getType() {
 	return TASK_NET_PARTITION;

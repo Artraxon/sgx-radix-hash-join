@@ -21,8 +21,7 @@ class SgxPartitioning : public Task {
 public:
 
     SgxPartitioning(uint32_t nodeId, hpcjoin::data::Relation* innerRelation, hpcjoin::data::Relation* outerRelation, hpcjoin::data::Window* innerWindow,
-                    hpcjoin::data::Window* outerWindow, hpcjoin::histograms::OffsetMap* innerOffsets, hpcjoin::histograms::OffsetMap* outerOffsets,
-                    hpcjoin::histograms::SgxOffsetMap* innerSgxOffsets, hpcjoin::histograms::SgxOffsetMap* outerSgxOffsets);
+                    hpcjoin::data::Window* outerWindow, uint64_t* innerOffsets, uint64_t* outerOffsets);
     ~SgxPartitioning();
 
 public:
@@ -32,10 +31,9 @@ public:
 
 protected:
 
-    void SgxPartitioning::partition(hpcjoin::data::Relation *relation,
+    void partition(hpcjoin::data::Relation *relation,
                                     hpcjoin::data::Window *window,
-                                    hpcjoin::histograms::OffsetMap* offsets,
-                                    hpcjoin::histograms::SgxOffsetMap* sgxOffsets);
+                                    uint64_t* offsets);
 
 protected:
 
@@ -47,15 +45,12 @@ protected:
 	hpcjoin::data::Window *innerWindow;
 	hpcjoin::data::Window *outerWindow;
 
-    hpcjoin::histograms::OffsetMap* innerOffsets;
-    hpcjoin::histograms::OffsetMap* outerOffsets;
+    uint64_t* innerOffsets;
+    uint64_t* outerOffsets;
 
-    hpcjoin::histograms::SgxOffsetMap* innerSgxOffsets;
-    hpcjoin::histograms::SgxOffsetMap* outerSgxOffsets;
 
 protected:
 
-	inline static void streamWrite(void *to, void *from)  __attribute__((always_inline));
 
 };
 

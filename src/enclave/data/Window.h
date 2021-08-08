@@ -8,6 +8,8 @@
 #define HPCJOIN_DATA_WINDOW_H_
 
 #include <mpi.h>
+#include <utility>
+#include <histograms/AssignmentMap.h>
 
 #ifdef USE_FOMPI
 #include <fompi.h>
@@ -24,8 +26,9 @@ class Window {
 
 public:
 
-    Window(uint32_t numberOfNodes, uint32_t nodeId, uint32_t* assignment, uint64_t* localHistogram, uint64_t* globalHistogram, uint64_t* baseOffsets, uint64_t* writeOffsets,
-                   uint64_t* sgxLocalHistogram, uint64_t* sgxGlobalHistogram, uint64_t* sgxBaseOffsets, uint64_t* sgxWriteOffsets);
+    Window(uint32_t numberOfNodes, uint32_t nodeId, histograms::AssignmentMap* assignment,
+           uint64_t* localHistogram, uint64_t* globalHistogram, uint64_t* baseOffsets, uint64_t* writeOffsets,
+           uint64_t* sgxLocalHistogram, uint64_t* sgxGlobalHistogram, uint64_t* sgxBaseOffsets, uint64_t* sgxWriteOffsets, uint64_t* sealedSizes);
 	~Window();
 
 public:
@@ -37,6 +40,8 @@ public:
 
 	void flush();
 
+	void unsealData();
+
 public:
 
 	CompressedTuple *getPartition(uint32_t partitionId);
@@ -44,8 +49,9 @@ public:
 
 public:
 
-	uint64_t computeLocalWindowSize();
-	uint64_t computeWindowSize(uint32_t nodeId);
+	std::pair<uint64_t, uint64_t> computeLocalWindowSize();
+	std::pair<uint64_t, uint64_t> computeWindowSize(uint32_t nodeId);
+
 
 public:
 
@@ -54,6 +60,7 @@ public:
 protected:
 
 	uint64_t localWindowSize;
+	uint64_t localSealedWindowSize;
 	hpcjoin::data::CompressedTuple *data;
 	void* encryptedData;
 	uint16_t winNr;
@@ -71,14 +78,17 @@ protected:
 	uint32_t nodeId;
 
 	uint32_t *assignment;
+	int* nodePartitionHistogram;
 	uint64_t *localHistogram;
 	uint64_t *globalHistogram;
 	uint64_t *baseOffsets;
+
 	uint64_t *writeOffsets;
-    uint64_t* sgxLocalHistogram;
+    uint64_t * sgxLocalHistogram;
     uint64_t* sgxGlobalHistogram;
     uint64_t* sgxBaseOffsets;
     uint64_t* sgxWriteOffsets;
+    uint64_t* sealedSizes;
 
     uint64_t *writeCounters;
 

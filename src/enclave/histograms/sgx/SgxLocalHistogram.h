@@ -17,20 +17,22 @@ class SgxLocalHistogram {
 
 public:
 
-	SgxLocalHistogram(hpcjoin::histograms::LocalHistogram *localHistogram);
+	SgxLocalHistogram(uint64_t * localHistogram, uint32_t numberOfNodes, uint64_t localSize);
 	~SgxLocalHistogram();
 
 public:
 
 	void computeLocalHistogram();
 
-	uint64_t *getLocalHistogram();
+	uint64_t* getLocalHistogram();
 
 protected:
 
-	hpcjoin::histograms::LocalHistogram *localHistogram;
-	uint64_t *values;
+	uint64_t * localHistogram;
+	uint64_t* values;
 
+	uint32_t numberOfNodes;
+	uint64_t localSize;
 };
 
 } /* namespace histograms */

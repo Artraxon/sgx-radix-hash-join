@@ -45,6 +45,9 @@ public:
 	uint64_t *getOuterRelationBaseOffsets();
 	uint64_t *getInnerRelationWriteOffsets();
 	uint64_t *getOuterRelationWriteOffsets();
+	uint64_t* getInnerLocalOffsets();
+    uint64_t* getOuterLocalOffsets();
+	hpcjoin::histograms::AssignmentMap* getAssignmentMap();
 
 protected:
 

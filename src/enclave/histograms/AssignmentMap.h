@@ -11,6 +11,7 @@
 
 #include <histograms/GlobalHistogram.h>
 
+
 namespace hpcjoin {
 namespace histograms {
 
@@ -18,21 +19,23 @@ class AssignmentMap {
 
 public:
 
-	AssignmentMap(uint32_t numberOfNodes, hpcjoin::histograms::GlobalHistogram *innerRelationGlobalHistogram, hpcjoin::histograms::GlobalHistogram *outerRelationGlobalHistogram);
+	AssignmentMap(uint32_t numberOfNodes);
 	~AssignmentMap();
 
 public:
 
 	void computePartitionAssignment();
-	uint32_t *getPartitionAssignment();
+	uint32_t* getPartitionAssignment();
+	int* getNodePartitionHistogram();
 
 protected:
 
 	uint32_t numberOfNodes;
-	hpcjoin::histograms::GlobalHistogram *innerRelationGlobalHistogram;
-	hpcjoin::histograms::GlobalHistogram *outerRelationGlobalHistogram;
+	//hpcjoin::histograms::GlobalHistogram *innerRelationGlobalHistogram;
+	//hpcjoin::histograms::GlobalHistogram *outerRelationGlobalHistogram;
 
-	uint32_t *assignment;
+	uint32_t* assignment;
+	int* nodePartitionHistogram;
 
 };
 

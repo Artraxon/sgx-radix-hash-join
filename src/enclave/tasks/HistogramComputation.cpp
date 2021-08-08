@@ -5,6 +5,7 @@
  */
 
 #include "HistogramComputation.h"
+#include "SgxHistogramComputation.h"
 
 #include <stdlib.h>
 
@@ -22,13 +23,13 @@ HistogramComputation::HistogramComputation(uint32_t numberOfNodes, uint32_t node
 	this->innerRelation = innerRelation;
 	this->outerRelation = outerRelation;
 
-	this->innerRelationLocalHistogram = new hpcjoin::histograms::LocalHistogram(innerRelation);
+    this->assignment = new hpcjoin::histograms::AssignmentMap(this->numberOfNodes);
+
+    this->innerRelationLocalHistogram = new hpcjoin::histograms::LocalHistogram(innerRelation);
 	this->outerRelationLocalHistogram = new hpcjoin::histograms::LocalHistogram(outerRelation);
 
 	this->innerRelationGlobalHistogram = new hpcjoin::histograms::GlobalHistogram(this->innerRelationLocalHistogram);
 	this->outerRelationGlobalHistogram = new hpcjoin::histograms::GlobalHistogram(this->outerRelationLocalHistogram);
-
-	this->assignment = new hpcjoin::histograms::AssignmentMap(this->numberOfNodes, this->innerRelationGlobalHistogram, this->outerRelationGlobalHistogram);
 
 	this->innerOffsets = new hpcjoin::histograms::OffsetMap(this->numberOfNodes, this->innerRelationLocalHistogram, this->innerRelationGlobalHistogram, this->assignment);
 	this->outerOffsets = new hpcjoin::histograms::OffsetMap(this->numberOfNodes, this->outerRelationLocalHistogram, this->outerRelationGlobalHistogram, this->assignment);
@@ -52,13 +53,13 @@ HistogramComputation::~HistogramComputation() {
 
 void HistogramComputation::execute() {
 
+    this->assignment->computePartitionAssignment();
+
 	this->innerRelationLocalHistogram->computeLocalHistogram();
 	this->outerRelationLocalHistogram->computeLocalHistogram();
 
 	this->innerRelationGlobalHistogram->computeGlobalHistogram();
 	this->outerRelationGlobalHistogram->computeGlobalHistogram();
-
-	this->assignment->computePartitionAssignment();
 
 	this->innerOffsets->computeOffsets();
 	this->outerOffsets->computeOffsets();
@@ -124,6 +125,18 @@ uint64_t* HistogramComputation::getOuterRelationWriteOffsets() {
 
 task_type_t HistogramComputation::getType() {
 	return TASK_HISTOGRAM;
+}
+
+hpcjoin::histograms::AssignmentMap* HistogramComputation::getAssignmentMap(){
+    return this->assignment;
+}
+
+uint64_t* HistogramComputation::getInnerLocalOffsets(){
+    return this->innerOffsets->getLocalOffsets();
+}
+
+uint64_t* HistogramComputation::getOuterLocalOffsets(){
+    return this->outerOffsets->getLocalOffsets();
 }
 
 } /* namespace tasks */

@@ -8,6 +8,7 @@
 #define HPCJOIN_HISTOGRAMS_GLOBALHISTOGRAM_H_
 
 #include <histograms/sgx/SgxLocalHistogram.h>
+#include <histograms/AssignmentMap.h>
 
 namespace hpcjoin {
 namespace histograms {
@@ -16,18 +17,28 @@ class SgxGlobalHistogram {
 
 public:
 
-	SgxGlobalHistogram(hpcjoin::histograms::SgxLocalHistogram *localHistogram);
+	SgxGlobalHistogram(hpcjoin::histograms::SgxLocalHistogram* localHistogram, hpcjoin::histograms::AssignmentMap* assignmentMap, uint32_t numberOfNodes, uint32_t nodeID);
 	~SgxGlobalHistogram();
 
 public:
 
 	void computeGlobalHistogram();
-	uint64_t *getGlobalHistogram();
+	uint64_t* getGlobalHistogram();
+	uint64_t* getSealedSizes();
 
 protected:
 
-	hpcjoin::histograms::SgxLocalHistogram *localHistogram;
-	uint64_t *values;
+	hpcjoin::histograms::SgxLocalHistogram* localHistogram;
+	hpcjoin::histograms::AssignmentMap* assignmentMap;
+    uint64_t* values;
+    uint64_t* sealedSizes;
+
+    uint32_t numberOfNodes;
+    uint32_t nodeID;
+
+protected:
+
+    void prepareSendBuffer(int* sendDisp, uint64_t * sendBuf);
 
 };
 

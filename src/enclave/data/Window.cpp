@@ -9,18 +9,20 @@
 #include <core/Configuration.h>
 #include <utils/Debug.h>
 #include <Enclave_t.h>
+#include <sgx_tseal.h>
 
 #include <unistd.h>
 
 namespace hpcjoin {
 namespace data {
 
-Window::Window(uint32_t numberOfNodes, uint32_t nodeId, uint32_t* assignment, uint64_t* localHistogram, uint64_t* globalHistogram, uint64_t* baseOffsets, uint64_t* writeOffsets,
-               uint64_t* sgxLocalHistogram, uint64_t* sgxGlobalHistogram, uint64_t* sgxBaseOffsets, uint64_t* sgxWriteOffsets) {
+Window::Window(uint32_t numberOfNodes, uint32_t nodeId, histograms::AssignmentMap* assignment, uint64_t* localHistogram, uint64_t* globalHistogram, uint64_t* baseOffsets, uint64_t* writeOffsets,
+               uint64_t* sgxLocalHistogram, uint64_t* sgxGlobalHistogram, uint64_t* sgxBaseOffsets, uint64_t* sgxWriteOffsets, uint64_t* sealedSizes) {
 
 	this->numberOfNodes = numberOfNodes;
 	this->nodeId = nodeId;
-	this->assignment = assignment;
+	this->assignment = assignment->getPartitionAssignment();
+	this->nodePartitionHistogram = assignment->getNodePartitionHistogram();
 	this->localHistogram = localHistogram;
 	this->globalHistogram = globalHistogram;
 	this->baseOffsets = baseOffsets;
@@ -31,8 +33,13 @@ Window::Window(uint32_t numberOfNodes, uint32_t nodeId, uint32_t* assignment, ui
 	this->sgxBaseOffsets = sgxBaseOffsets;
 	this->sgxWriteOffsets = sgxWriteOffsets;
 
+	this->sealedSizes = sealedSizes;
+
 	this->writeCounters = (uint64_t *) calloc(hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT, sizeof(uint64_t));
-	this->localWindowSize = computeLocalWindowSize();
+
+	auto windowsSizes = computeLocalWindowSize();
+	this->localWindowSize = windowsSizes.first;
+	this->localSealedWindowSize = windowsSizes.second;
 
 
     ocall_init_MPI_Window(localWindowSize * sizeof(hpcjoin::data::CompressedTuple), &this->encryptedData, &winNr);
@@ -108,7 +115,7 @@ void Window::write(uint32_t partitionId, CompressedTuple* tuples, uint64_t sizeI
 #endif
 
 	uint32_t targetProcess = this->assignment[partitionId];
-	uint64_t targetOffset = this->writeOffsets[partitionId] + this->writeCounters[partitionId];
+	uint64_t targetOffset = this->sgxWriteOffsets[partitionId] + this->writeCounters[partitionId];
 
 	//JOIN_DEBUG("Window", "Target %d and offset %lu (%lu + %lu)", targetProcess, targetOffset, this->writeOffsets[partitionId], this->writeCounters[partitionId]);
 
@@ -118,17 +125,25 @@ void Window::write(uint32_t partitionId, CompressedTuple* tuples, uint64_t sizeI
 	JOIN_ASSERT(targetOffset <= remoteSize, "Window", "Target offset is outside window range");
 	JOIN_ASSERT(targetOffset + sizeInTuples <= remoteSize, "Window", "Target offset and size is outside window range");
 
+	uint32_t encryptedSize = sgx_calc_sealed_data_size(0, sizeInTuples * sizeof(CompressedTuple));
+	auto *buffer = static_cast<sgx_sealed_data_t *>(malloc(encryptedSize));
+    sgx_seal_data(0, nullptr, sizeInTuples * sizeof(CompressedTuple), reinterpret_cast<const uint8_t *>(tuples), encryptedSize, buffer);
+    void *untrustedBuffer;
+    ocall_calloc_heap(&untrustedBuffer, encryptedSize);
+    memcpy(untrustedBuffer, buffer, encryptedSize);
+
+
 	#ifdef USE_FOMPI
 	foMPI_Put(tuples, sizeInTuples * sizeof(CompressedTuple), MPI_BYTE, targetProcess, targetOffset * sizeof(CompressedTuple), sizeInTuples * sizeof(CompressedTuple), MPI_BYTE, *window);
 	#else
-	MPI_Put(tuples, sizeInTuples * sizeof(CompressedTuple), MPI_BYTE, targetProcess, targetOffset * sizeof(CompressedTuple), sizeInTuples * sizeof(CompressedTuple), MPI_BYTE, *window);
+	ocall_MPI_Put_Heap(untrustedBuffer, encryptedSize, targetProcess, targetOffset, encryptedSize, winNr);
 	#endif
 
 	this->writeCounters[partitionId] += sizeInTuples;
 	//JOIN_DEBUG("Window", "Partition %d has now %lu tuples", partitionId, this->writeCounters[partitionId]);
 
-	JOIN_ASSERT(this->writeCounters[partitionId] <= this->localHistogram[partitionId], "Window",
-			"Node %d is writing to partition %d. Has %lu tuples declared, but write counter is now %lu.", this->nodeId, partitionId, this->localHistogram[partitionId],
+	JOIN_ASSERT(this->writeCounters[partitionId] <= this->localSgxHistogram[partitionId], "Window",
+			"Node %d is writing to partition %d. Has %lu tuples declared, but write counter is now %lu.", this->nodeId, partitionId, this->localSgxHistogram[partitionId],
 			this->writeCounters[partitionId]);
 
 #ifdef MEASUREMENT_DETAILS_NETWORK
@@ -144,7 +159,7 @@ void Window::write(uint32_t partitionId, CompressedTuple* tuples, uint64_t sizeI
 		#ifdef USE_FOMPI
 		foMPI_Win_flush_local(targetProcess, *window);
 		#else
-		MPI_Win_flush_local(targetProcess, *window);
+		ocall_MPI_Win_flush_local(targetProcess, winNr);
 		#endif
 #ifdef MEASUREMENT_DETAILS_NETWORK
 	//enclave::performance::Measurements::stopNetworkPartitioningWindowWait();
@@ -152,6 +167,24 @@ void Window::write(uint32_t partitionId, CompressedTuple* tuples, uint64_t sizeI
 #endif
 	}
 
+}
+
+void Window::unsealData() {
+    uint8_t * enclaveEncryptedData = (uint8_t *) malloc(localSealedWindowSize);
+    memcpy(enclaveEncryptedData, encryptedData, localSealedWindowSize);
+
+    int entries = nodePartitionHistogram[this->nodeId] * numberOfNodes;
+    uint64_t currentEncryptedOffset = 0;
+    uint64_t currentDecryptedOffset = 0;
+
+    for (int i = 0; i < entries; ++i) {
+        sgx_sealed_data_t* currentEncryptedData = (sgx_sealed_data_t *) (enclaveEncryptedData + currentEncryptedOffset);
+        uint8_t* currentDecrpytedData = ((uint8_t*) this->data) + currentDecryptedOffset;
+        uint32_t decryptedSize = sgx_get_encrypt_txt_len(currentEncryptedData);
+        sgx_unseal_data(currentEncryptedData, nullptr, 0, currentDecrpytedData, &decryptedSize);
+        currentEncryptedOffset += this->sealedSizes[i];
+        currentDecryptedOffset += decryptedSize;
+    }
 }
 
 CompressedTuple* Window::getPartition(uint32_t partitionId) {
@@ -170,21 +203,23 @@ uint64_t Window::getPartitionSize(uint32_t partitionId) {
 
 }
 
-uint64_t Window::computeLocalWindowSize() {
+
+std::pair<uint64_t, uint64_t> Window::computeLocalWindowSize() {
 
 	return computeWindowSize(this->nodeId);
 
 }
 
-uint64_t Window::computeWindowSize(uint32_t nodeId) {
-
+std::pair<uint64_t, uint64_t> Window::computeWindowSize(uint32_t nodeId) {
 	uint64_t sum = 0;
+	uint64_t sgxSum = 0;
 	for (uint32_t p = 0; p < hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT; ++p) {
 		if (this->assignment[p] == nodeId) {
 			sum += this->globalHistogram[p];
+			sum += this->sgxGlobalHistogram[p];
 		}
 	}
-	return sum;
+	return std::pair<uint64_t, uint64_t>(sum, sgxSum);
 
 }
 
@@ -202,7 +237,7 @@ void Window::flush() {
 	#ifdef USE_FOMPI
 	foMPI_Win_flush_local_all(*window);
 	#else
-	MPI_Win_flush_local_all(*window);
+	ocall_MPI_Win_flush_local_all(winNr);
 	#endif
 
 }

@@ -80,6 +80,32 @@ void ocall_MPI_Win_lock_all(int assert, uint16_t windowNr){
 
 void ocall_MPI_Win_unlock_all(uint16_t windowNr){
     auto window_pair = windows->find(windowNr);
-    JOIN_ASSERT(window_pair != windows->end(), "Window", "Couldn't find Window %d when trying to lock it", windowNr);
+    JOIN_ASSERT(window_pair != windows->end(), "Window", "Couldn't find Window %d when trying to unlock it", windowNr);
     MPI_Win_unlock_all(*window_pair->second.getWin());
+}
+
+void ocall_MPI_AllToAllv(uint64_t* input,
+                         int* sendCounts, int* sendDisp,
+                         uint64_t* output,
+                         int* recCounts, int* recDisp,
+                         uint64_t partitions, uint32_t nodes, uint64_t outputSize){
+    MPI_Alltoallv(input, sendCounts, sendDisp, MPI_UINT64_T, output, recCounts, recDisp, MPI_UINT64_T, MPI_COMM_WORLD);
+}
+
+void ocall_MPI_Put_Heap(void* buffer, uint64_t len, uint32_t target_rank, uint64_t target_disp, uint64_t target_count, uint16_t windowNr){
+    auto window_pair = windows->find(windowNr);
+    JOIN_ASSERT(window_pair != windows->end(), "Window", "Couldn't find Window %d when trying to write data", windowNr);
+    MPI_Put(buffer, len, MPI_BYTE, target_rank, target_disp, target_count, MPI_BYTE, *window_pair->second.getWin());
+}
+
+void ocall_MPI_Win_flush_local(uint32_t targetProcess, uint16_t windowNr){
+    auto window_pair = windows->find(windowNr);
+    JOIN_ASSERT(window_pair != windows->end(), "Window", "Couldn't find Window %d when trying to flush local data to a process", windowNr);
+    MPI_Win_flush_local(targetProcess, *window_pair->second.getWin());
+}
+
+void ocall_MPI_Win_flush_local_all(uint16_t windowNr){
+    auto window_pair = windows->find(windowNr);
+    JOIN_ASSERT(window_pair != windows->end(), "Window", "Couldn't find Window %d when trying to flush all local data", windowNr);
+    MPI_Win_flush_local_all(*window_pair->second.getWin());
 }
