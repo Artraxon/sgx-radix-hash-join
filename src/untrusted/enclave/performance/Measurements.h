@@ -17,6 +17,7 @@
 namespace hpcjoin {
 namespace performance {
 
+
 class Measurements {
 
 	/**
@@ -34,6 +35,7 @@ public:
 	static void startLocalProcessing();
 	static void stopLocalProcessing();
 	static void storePhaseData();
+	static void saveResultCounter(uint64_t counter);
 
 protected:
 
@@ -49,6 +51,7 @@ protected:
 	static uint64_t totalCycles;
 	static uint64_t totalTime;
 	static uint64_t phaseTimes[3];
+    static uint64_t resultCounter;
 
 	/**
 	 * Timing for synchronization and preparations

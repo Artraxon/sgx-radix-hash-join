@@ -48,13 +48,15 @@ void SgxGlobalHistogram::computeGlobalHistogram() {
     uint64_t sendBuf[hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT];
     int* sendCounts = assignmentMap->getNodePartitionHistogram();
     int sendDisp[this->numberOfNodes];
-    std::partial_sum(sendCounts, sendCounts + this->numberOfNodes, sendDisp);
+    sendDisp[0] = 0;
+    std::partial_sum(sendCounts, sendCounts + this->numberOfNodes - 1, sendDisp + 1);
 
     int recCounts[this->numberOfNodes];
     //We receive as many values from every node as we are responsible for a partition
     std::fill(recCounts, recCounts + this->numberOfNodes, partitionsResponsible);
     int recDisp[this->numberOfNodes];
-    std::partial_sum(recCounts, recCounts + this->numberOfNodes, recDisp);
+    recDisp[0] = 0;
+    std::partial_sum(recCounts, recCounts + this->numberOfNodes - 1, recDisp + 1);
 
     prepareSendBuffer(sendDisp, sendBuf);
     uint64_t outBuf[outputSize];

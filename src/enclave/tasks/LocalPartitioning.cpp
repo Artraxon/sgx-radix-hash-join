@@ -6,7 +6,6 @@
 
 #include "LocalPartitioning.h"
 
-#include <immintrin.h>
 #include <stdlib.h>
 
 #include <core/Configuration.h>
@@ -202,7 +201,7 @@ void LocalPartitioning::partitionData(hpcjoin::data::CompressedTuple* input, uin
 		cacheLine[slotMod] = input[t];
 
 		if(slotMod == (TUPLES_PER_CACHELINE-1)){
-			streamWrite((output+slot-(TUPLES_PER_CACHELINE-1)), cacheLine);
+			memcpy((output+slot-(TUPLES_PER_CACHELINE-1)), cacheLine, LOCAL_PARTITIONING_CACHELINE_SIZE);
 		}
 
 		inCacheBuffer[partitionId].data.slot = slot+1;
@@ -228,6 +227,7 @@ void LocalPartitioning::partitionData(hpcjoin::data::CompressedTuple* input, uin
 
 }
 
+/*
 void LocalPartitioning::streamWrite(void* to, void* from) {
 
 	JOIN_ASSERT(to != NULL, "Local Partitioning", "Stream destination should not be NULL");
@@ -245,6 +245,7 @@ void LocalPartitioning::streamWrite(void* to, void* from) {
 	_mm256_stream_si256(d2, s2);
 
 }
+*/
 
 task_type_t LocalPartitioning::getType() {
 	return TASK_PARTITION;

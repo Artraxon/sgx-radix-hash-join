@@ -38,8 +38,8 @@ namespace tasks {
 	this->innerRelationSgxLocalHistogram = new hpcjoin::histograms::SgxLocalHistogram(innerLocalHistogram, numberOfNodes, innerRelationSize);
 	this->outerRelationSgxLocalHistogram = new hpcjoin::histograms::SgxLocalHistogram(outerLocalHistogram, numberOfNodes, outerRelationSize);
 
-	this->innerRelationSgxGlobalHistogram = new hpcjoin::histograms::SgxGlobalHistogram(innerRelationSgxLocalHistogram, assignment, numberOfNodes, nodeID);
-    this->outerRelationSgxGlobalHistogram = new hpcjoin::histograms::SgxGlobalHistogram(outerRelationSgxLocalHistogram, assignment, numberOfNodes, nodeID);
+	this->innerRelationSgxGlobalHistogram = new hpcjoin::histograms::SgxGlobalHistogram(innerRelationSgxLocalHistogram, assignment, numberOfNodes, nodeId);
+    this->outerRelationSgxGlobalHistogram = new hpcjoin::histograms::SgxGlobalHistogram(outerRelationSgxLocalHistogram, assignment, numberOfNodes, nodeId);
 
 	this->innerOffsets = new hpcjoin::histograms::SgxOffsetMap(this->numberOfNodes, this->innerRelationSgxLocalHistogram, this->innerRelationSgxGlobalHistogram, this->assignment);
 	this->outerOffsets = new hpcjoin::histograms::SgxOffsetMap(this->numberOfNodes, this->outerRelationSgxLocalHistogram, this->outerRelationSgxGlobalHistogram, this->assignment);
@@ -60,8 +60,6 @@ SgxHistogramComputation::~SgxHistogramComputation() {
 }
 
 void SgxHistogramComputation::execute() {
-
-    this->assignment->computePartitionAssignment();
 
 	this->innerRelationSgxLocalHistogram->computeLocalHistogram();
 	this->outerRelationSgxLocalHistogram->computeLocalHistogram();

@@ -9,7 +9,6 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <stdio.h>
-#include <mpi.h>
 #include <Enclave_t.h>
 #include <sgx_tseal.h>
 

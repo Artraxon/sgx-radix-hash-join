@@ -40,10 +40,7 @@ enclave {
     from "sgx_pthread.edl" import *;
 
     trusted {
-        public sgx_status_t total_init();
-
-        public uint64_t ecall_getResultCounter();
-
+        public void ecall_start_hash_join();
 };
 
 untrusted {
@@ -52,6 +49,8 @@ untrusted {
         *  [in]: copy the string buffer to App outside.
         *  [string]: specifies 'str' is a NULL terminated buffer.
         */
+
+    void ocall_setResultCounter(uint64_t counter);
 
     /**
      * MPI Communication
@@ -78,6 +77,11 @@ untrusted {
 
     void ocall_MPI_Win_flush_local(uint32_t targetProcess, uint16_t windowNr);
 	void ocall_MPI_Win_flush_local_all(uint16_t windowNr);
+	void ocall_MPI_Barrier();
+	void ocall_MPI_Init();
+	void ocall_MPI_Comm_size([out, count=1] int32_t* size);
+	void ocall_MPI_Comm_rank([out, count=1] int32_t* rank);
+	void ocall_MPI_Finalize();
 
 
 	/**

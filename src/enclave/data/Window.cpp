@@ -10,6 +10,7 @@
 #include <utils/Debug.h>
 #include <Enclave_t.h>
 #include <sgx_tseal.h>
+#include <cstring>
 
 #include <unistd.h>
 
@@ -42,7 +43,7 @@ Window::Window(uint32_t numberOfNodes, uint32_t nodeId, histograms::AssignmentMa
 	this->localSealedWindowSize = windowsSizes.second;
 
 
-    ocall_init_MPI_Window(localWindowSize * sizeof(hpcjoin::data::CompressedTuple), &this->encryptedData, &winNr);
+    ocall_init_MPI_Window(localSealedWindowSize, &this->encryptedData, &winNr);
 /*
 	#ifdef USE_FOMPI
 	this->window = (foMPI_Win *) calloc(1, sizeof(foMPI_Win));
@@ -174,6 +175,7 @@ void Window::unsealData() {
     memcpy(enclaveEncryptedData, encryptedData, localSealedWindowSize);
 
     int entries = nodePartitionHistogram[this->nodeId] * numberOfNodes;
+    this->data = (CompressedTuple*) malloc(this->localSealedWindowSize * sizeof(hpcjoin::data::CompressedTuple));
     uint64_t currentEncryptedOffset = 0;
     uint64_t currentDecryptedOffset = 0;
 
@@ -216,7 +218,7 @@ std::pair<uint64_t, uint64_t> Window::computeWindowSize(uint32_t nodeId) {
 	for (uint32_t p = 0; p < hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT; ++p) {
 		if (this->assignment[p] == nodeId) {
 			sum += this->globalHistogram[p];
-			sum += this->sgxGlobalHistogram[p];
+			sgxSum += this->sgxGlobalHistogram[p];
 		}
 	}
 	return std::pair<uint64_t, uint64_t>(sum, sgxSum);

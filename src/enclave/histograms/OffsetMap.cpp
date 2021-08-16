@@ -5,12 +5,9 @@
  */
 
 #include "OffsetMap.h"
-#include "../../shared/core/Configuration.h"
+#include <core/Configuration.h>
 
 #include <stdlib.h>
-#include <mpi.h>
-
-#include <core/Configuration.h>
 
 #include <Enclave_t.h>
 namespace hpcjoin {
@@ -76,8 +73,7 @@ void OffsetMap::computeBaseOffsets() {
 
 void OffsetMap::computeRelativePrivateOffsets() {
 
-	MPI_Scan(this->localHistogram->getLocalHistogram(), this->relativeWriteOffsets, hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT, MPI_UINT64_T, MPI_SUM,
-			MPI_COMM_WORLD);
+    ocall_MPI_scan_sum(this->localHistogram->getLocalHistogram(), this->relativeWriteOffsets, hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT);
 
 	uint64_t *histogram = this->localHistogram->getLocalHistogram();
 	for (uint32_t i = 0; i < hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT; ++i) {

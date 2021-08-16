@@ -4,12 +4,6 @@
  *
  */
 
-#include <mpi.h>
-
-#ifdef USE_FOMPI
-#include <fompi.h>
-#endif
-
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,21 +12,18 @@
 
 #include <Enclave_t.h>
 #include <operators/HashJoin.h>
-#include "../shared/data/Relation.h"
 #include <core/Configuration.h>
 #include "../shared/utils/Debug.h"
-#include <utils/Thread.h>
 #include <memory/Pool.h>
-#include "../shared/data/Tuple.h"
 
 
-int main(int argc, char *argv[]) {
+void ecall_start_hash_join(){
 
-	JOIN_MEM_DEBUG("Main Start");
+    JOIN_MEM_DEBUG("Main Start");
 
 	JOIN_DEBUG("Main", "Initializing MPI");
 
-	MPI_Init(NULL, NULL);
+	ocall_MPI_Init();
 
 #ifdef USE_FOMPI
 	foMPI_Init(NULL, NULL);
@@ -43,8 +34,8 @@ int main(int argc, char *argv[]) {
 	int32_t numberOfNodes = -1;
 	int32_t nodeId = -1;
 
-	MPI_Comm_size(MPI_COMM_WORLD, &numberOfNodes);
-	MPI_Comm_rank(MPI_COMM_WORLD, &nodeId);
+	ocall_MPI_Comm_size(&numberOfNodes);
+	ocall_MPI_Comm_rank(&nodeId);
 
 	JOIN_DEBUG("Main", "Node %d is preparing performance counters", nodeId);
 
@@ -71,10 +62,15 @@ int main(int argc, char *argv[]) {
 
 	JOIN_MEM_DEBUG("Init Completed");
 
+/*
 	uint64_t globalInnerRelationSize = ((uint64_t) numberOfNodes) * 200000;
 	uint64_t globalOuterRelationSize = ((uint64_t) numberOfNodes) * 200000;
+*/
 
-	uint64_t localInnerRelationSize =
+    uint64_t globalInnerRelationSize = ((uint64_t) numberOfNodes) * 2000;
+    uint64_t globalOuterRelationSize = ((uint64_t) numberOfNodes) * 2000;
+
+    uint64_t localInnerRelationSize =
 			(nodeId < numberOfNodes - 1) ? (globalInnerRelationSize / numberOfNodes) : (globalInnerRelationSize - (numberOfNodes - 1) * (globalInnerRelationSize / numberOfNodes));
 
 	uint64_t localOuterRelationSize =
@@ -115,7 +111,7 @@ int main(int argc, char *argv[]) {
 	hpcjoin::operators::HashJoin *hashJoin = new hpcjoin::operators::HashJoin(numberOfNodes, nodeId, innerRelation, outerRelation);
 	JOIN_MEM_DEBUG("Join created");
 
-	MPI_Barrier(MPI_COMM_WORLD);
+	ocall_MPI_Barrier();
 
 	JOIN_DEBUG("Main", "Node %d is starting join", nodeId);
 
@@ -125,7 +121,7 @@ int main(int argc, char *argv[]) {
 
 	JOIN_DEBUG("Main", "Node %d finished join", nodeId);
 
-	MPI_Barrier(MPI_COMM_WORLD);
+	ocall_MPI_Barrier();
 
 	JOIN_DEBUG("Main", "Node %d finalizing measurements", nodeId);
 
@@ -133,6 +129,7 @@ int main(int argc, char *argv[]) {
 	    ocall_sendMeasurementsToAggregator();
 		//hpcjoin::performance::Measurements::sendMeasurementsToAggregator();
 	} else {
+	    ocall_setResultCounter(hashJoin->RESULT_COUNTER);
 	    ocall_printMeasurements(numberOfNodes, nodeId);
 		//hpcjoin::performance::Measurements::printMeasurements(numberOfNodes, nodeId);
 	}
@@ -147,9 +144,7 @@ int main(int argc, char *argv[]) {
 	foMPI_Finalize();
 #endif
 
-	MPI_Finalize();
-
-	return 0;
+	ocall_MPI_Finalize();
 
 }
 

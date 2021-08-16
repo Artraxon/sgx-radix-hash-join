@@ -8,6 +8,7 @@ ROOT_DIR			:= $(shell pwd)
 
 ########################################
 
+SGX_SDK				= /home/leonhard/packages/sgxsdk
 MPI_FOLDER			= /usr
 COMPILER_FLAGS 		= -O3 -std=c++0x -mavx -lpthread -lpapi -D MEASUREMENT_DETAILS_HISTOGRAM -D MEASUREMENT_DETAILS_NETWORK -D MEASUREMENT_DETAILS_LOCALPART -D MEASUREMENT_DETAILS_LOCALBP
 PAPI_FOLDER			= /bin
@@ -116,12 +117,11 @@ App_Cpp_Flags := $(App_C_Flags)
 App_Link_Flags := -L$(SGX_LIBRARY_PATH) -l$(Urts_Library_Name) -lpthread \
 				  -lgomp -lpapi \
 
-App_Cpp_Objects := $(App_Cpp_Files:./src/%.cpp=build/%.o)
-App_Cpp_Objects += $(App_C_Files:./src/%.c=build/%.o)
+App_Cpp_Objects := $(App_Cpp_Files:./src/untrusted/%.cpp=build/untrusted/%.o)
+App_Cpp_Objects += $(App_C_Files:./src/untrusted/%.c=build/untrusted/%.o)
 App_Cpp_Objects += $(Shared_Cpp_Files:./src/shared/%.c=build/shared/untrusted/%.o)
 
 
-App_Name := app
 
 ######## Enclave Settings ########
 ifneq ($(SGX_MODE), HW)
@@ -181,11 +181,11 @@ Enclave_Link_Flags := $(Enclave_Security_Link_Flags) \
 
 Enclave_Cpp_Objects := $(sort $(Enclave_Cpp_Files:.cpp=.o))
 Enclave_Cpp_Objects += $(sort $(Enclave_C_Files:.c=.o))
+
+Enclave_Cpp_Objects := $(Enclave_Cpp_Files:./src/enclave/%.cpp=build/enclave/%.o)
+Enclave_Cpp_Objects += $(Enclave_C_Files:./src/enclave/%.c=build/enclave/%.o)
 Enclave_Cpp_Objects += $(Shared_Cpp_Files:./src/shared/%.c=build/shared/trusted/%.o)
 
-Enclave_Name := enclave.so
-Signed_Enclave_Name := enclave.signed.so
-Enclave_Config_File := Enclave/Enclave.config.xml
 
 ifeq ($(SGX_MODE), HW)
 ifeq ($(SGX_DEBUG), 1)
@@ -308,23 +308,24 @@ generated/trusted/Enclave_t.o: generated/trusted/Enclave_t.c
 	@$(CC) $(SGX_COMMON_CFLAGS) $(Enclave_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-src/enclave/%.o: src/enclave/%.c generated/trusted/Enclave_t.h
+build/enclave/%.o: src/enclave/%.c generated/trusted/Enclave_t.h
 	mkdir -p $(@D)
-	$(CXX) $(SGX_COMMON_CXXFLAGS) $(Enclave_Cpp_Flags) -c $< -o $@ -I $(ROOT_DIR)/src/enclave -I /usr/include/x86_64-linux-gnu -I /usr/include -I /usr/lib/x86_64-linux-gnu/openmpi/include -DOMPI_IGNORE_CXX_SEEK -I $(ROOT_DIR)/src/shared
+	$(CXX) $(SGX_COMMON_CXXFLAGS) $(Enclave_Cpp_Flags) -c $< -o $@ -I $(ROOT_DIR)/src/enclave $(ROOT_DIR)/src/shared
 	@echo "CXX  <=  $<"
 
 #Enclave/%.o: Enclave/%.cpp Enclave/Enclave_t.h
-src/enclave/%.o: src/enclave/%.cpp generated/trusted/Enclave_t.h
+build/enclave/%.o: src/enclave/%.cpp generated/trusted/Enclave_t.h
 	mkdir -p $(@D)
-	$(CXX) $(SGX_COMMON_CXXFLAGS) $(Enclave_Cpp_Flags) -c $< -o $@ -I $(ROOT_DIR)/src/enclave -I /usr/include/x86_64-linux-gnu -I /usr/include -I /usr/lib/x86_64-linux-gnu/openmpi/include -DOMPI_IGNORE_CXX_SEEK -I $(ROOT_DIR)/src/shared
+	$(CXX) $(SGX_COMMON_CXXFLAGS) $(Enclave_Cpp_Flags) -c $< -o $@ -I $(ROOT_DIR)/src/enclave $(ROOT_DIR)/src/shared
 	@echo "CXX  <=  $<"
 
 $(Enclave_Name): generated/trusted/Enclave_t.o $(Enclave_Cpp_Objects)
-	@$(CXX) $^ -o $@ $(Enclave_Link_Flags)
+	mkdir -p $(RELEASE_FOLDER)
+	@$(CXX) $^ -o $(RELEASE_FOLDER)/$@ $(Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 
 $(Signed_Enclave_Name): $(Enclave_Name)
-	@$(SGX_ENCLAVE_SIGNER) sign -key src/enclave/Enclave_private_test.pem -enclave $(Enclave_Name) -out $@ -config $(Enclave_Config_File)
+	@$(SGX_ENCLAVE_SIGNER) sign -key src/enclave/Enclave_private_test.pem -enclave $(RELEASE_FOLDER)/$(Enclave_Name) -out $(RELEASE_FOLDER)/$@ -config $(Enclave_Config_File)
 	@echo "SIGN =>  $@"
 ########################################
 
@@ -339,7 +340,7 @@ program: $(OBJECT_FILES)
 clean:
 	rm -rf $(BUILD_FOLDER)
 	rm -rf $(RELEASE_FOLDER)
-	@rm -f .config_* $(App_Name) $(Enclave_Name) $(Signed_Enclave_Name) $(ROOT_DIR)/generated/trusted/Enclave_t.o $(ROOT_DIR)/generated/untrusted/Enclave_u.o
+	@rm -f .config_* $(App_Name) $(Enclave_Name) $(Signed_Enclave_Name) $(ROOT_DIR)/generated/trusted/* $(ROOT_DIR)/generated/untrusted/*
 
 ########################################
 

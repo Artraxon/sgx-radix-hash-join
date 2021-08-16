@@ -4,8 +4,8 @@
  *
  */
 
-#ifndef HPCJOIN_HISTOGRAMS_GLOBALHISTOGRAM_H_
-#define HPCJOIN_HISTOGRAMS_GLOBALHISTOGRAM_H_
+#ifndef HPCJOIN_HISTOGRAMS_SGXGLOBALHISTOGRAM_H_
+#define HPCJOIN_HISTOGRAMS_SGXGLOBALHISTOGRAM_H_
 
 #include <histograms/sgx/SgxLocalHistogram.h>
 #include <histograms/AssignmentMap.h>

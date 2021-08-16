@@ -84,9 +84,16 @@ namespace performance {
 
 /************************************************************/
 
+
+uint64_t Measurements::resultCounter;
 uint64_t Measurements::totalCycles;
 uint64_t Measurements::totalTime;
 uint64_t Measurements::phaseTimes[3];
+
+
+void Measurements::saveResultCounter(uint64_t counter){
+    resultCounter = counter;
+}
 
 void Measurements::startJoin() {
 	gettimeofday(&joinStart, NULL);
@@ -522,7 +529,8 @@ uint64_t* Measurements::serializeResults() {
 
 	uint64_t *result = (uint64_t *) calloc(NUM_OF_RESULT_ELEMENTS, sizeof(uint64_t));
 
-	ecall_getResultCounter(global_eid, result);
+	//ecall_getResultCounter(global_eid, result);
+	result[0] = resultCounter;
 	result[1] = totalTime;
 	result[2] = phaseTimes[0];
 	result[3] = phaseTimes[1];

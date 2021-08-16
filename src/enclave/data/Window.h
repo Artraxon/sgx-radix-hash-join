@@ -7,7 +7,6 @@
 #ifndef HPCJOIN_DATA_WINDOW_H_
 #define HPCJOIN_DATA_WINDOW_H_
 
-#include <mpi.h>
 #include <utility>
 #include <histograms/AssignmentMap.h>
 

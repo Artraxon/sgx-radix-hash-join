@@ -45,7 +45,7 @@ void HashJoin::join() {
 
 	/**********************************************************************/
 
-	MPI_Barrier(MPI_COMM_WORLD);
+	ocall_MPI_Barrier();
 	ocall_startJoin();
 	//hpcjoin::performance::Measurements::startJoin();
 
@@ -124,7 +124,7 @@ void HashJoin::join() {
 
 	ocall_startWaitingForNetworkCompletion();
 	//hpcjoin::performance::Measurements::startWaitingForNetworkCompletion();
-	MPI_Barrier(MPI_COMM_WORLD);
+	ocall_MPI_Barrier();
 	ocall_stopWaitingForNetworkCompletion();
 	//hpcjoin::performance::Measurements::stopWaitingForNetworkCompletion();
 
@@ -224,6 +224,6 @@ void HashJoin::join() {
 } /* namespace operators */
 } /* namespace enclave */
 
-uint64_t ecall_getResultCounter(void){
-    return hpcjoin::operators::HashJoin::RESULT_COUNTER;
+void ecall_getResultCounter(uint64_t* counter){
+    *counter = hpcjoin::operators::HashJoin::RESULT_COUNTER;
 }

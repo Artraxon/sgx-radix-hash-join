@@ -109,3 +109,21 @@ void ocall_MPI_Win_flush_local_all(uint16_t windowNr){
     JOIN_ASSERT(window_pair != windows->end(), "Window", "Couldn't find Window %d when trying to flush all local data", windowNr);
     MPI_Win_flush_local_all(*window_pair->second.getWin());
 }
+
+void ocall_MPI_Barrier(){
+    MPI_Barrier(MPI_COMM_WORLD);
+}
+void ocall_MPI_Init(){
+    MPI_Init(NULL, NULL);
+}
+
+void ocall_MPI_Comm_size(int32_t* size){
+    MPI_Comm_size(MPI_COMM_WORLD, size);
+}
+
+void ocall_MPI_Comm_rank(int32_t* rank){
+    MPI_Comm_rank(MPI_COMM_WORLD, rank);
+}
+void ocall_MPI_Finalize(){
+    MPI_Finalize();
+}

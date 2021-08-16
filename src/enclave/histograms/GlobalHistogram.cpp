@@ -6,7 +6,6 @@
 
 #include "GlobalHistogram.h"
 
-#include <mpi.h>
 
 #include <core/Configuration.h>
 #include <utils/Debug.h>
@@ -35,7 +34,7 @@ void GlobalHistogram::computeGlobalHistogram() {
 	//enclave::performance::Measurements::startHistogramGlobalHistogramComputation();
 #endif
 
-	MPI_Allreduce(this->localHistogram->getLocalHistogram(), this->values, hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT, MPI_UINT64_T, MPI_SUM, MPI_COMM_WORLD);
+	ocall_MPI_allreduce_sum(this->localHistogram->getLocalHistogram(), this->values, hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT);
 
 #ifdef MEASUREMENT_DETAILS_HISTOGRAM
 	ocall_stopHistogramGlobalHistogramComputation();

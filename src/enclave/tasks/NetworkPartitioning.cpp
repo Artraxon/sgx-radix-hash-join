@@ -6,7 +6,7 @@
 
 #include "NetworkPartitioning.h"
 
-#include <immintrin.h>
+//#include <immintrin.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -88,7 +88,8 @@ void NetworkPartitioning::partition(hpcjoin::data::Relation *relation, hpcjoin::
 #endif
 
 	hpcjoin::data::CompressedTuple * inMemoryBuffer = NULL;
-	int result = posix_memalign((void **) &(inMemoryBuffer), NETWORK_PARTITIONING_CACHELINE_SIZE, inMemoryBufferSize);
+	inMemoryBuffer = static_cast<data::CompressedTuple *>(malloc(inMemoryBufferSize));
+	//int result = posix_memalign((void **) &(inMemoryBuffer), NETWORK_PARTITIONING_CACHELINE_SIZE, inMemoryBufferSize);
 
 	JOIN_ASSERT(result == 0, "Network Partitioning", "Could not allocate in-memory buffer");
 	memset(inMemoryBuffer, 0, inMemoryBufferSize);
@@ -134,7 +135,8 @@ void NetworkPartitioning::partition(hpcjoin::data::Relation *relation, hpcjoin::
 
 			// Move cache line to memory buffer
 			char *inMemoryStreamDestination = PARTITION_ACCESS(partitionId) + (memoryCounter * NETWORK_PARTITIONING_CACHELINE_SIZE);
-			streamWrite(inMemoryStreamDestination, cacheLine);
+            memcpy(inMemoryStreamDestination, cacheLine, NETWORK_PARTITIONING_CACHELINE_SIZE);
+			//streamWrite(inMemoryStreamDestination, cacheLine);
 			++memoryCounter;
 
 			//JOIN_DEBUG("Network Partitioning", "Node %d has completed the stream write of cache line %d", this->nodeId, partitionId);
@@ -210,6 +212,7 @@ ocall_stopNetworkPartitioningMainPartitioning(numberOfElements);
 
 }
 
+/*
 inline void NetworkPartitioning::streamWrite(void* to, void* from) {
 
 	JOIN_ASSERT(to != NULL, "Network Partitioning", "Stream destination should not be NULL");
@@ -226,7 +229,8 @@ inline void NetworkPartitioning::streamWrite(void* to, void* from) {
 	_mm256_stream_si256(d1, s1);
 	_mm256_stream_si256(d2, s2);
 
-	/*
+	*/
+/*
     register __m128i * d1 = (__m128i*) to;
     register __m128i * d2 = d1+1;
     register __m128i * d3 = d1+2;
@@ -240,9 +244,11 @@ inline void NetworkPartitioning::streamWrite(void* to, void* from) {
     _mm_stream_si128 (d2, s2);
     _mm_stream_si128 (d3, s3);
     _mm_stream_si128 (d4, s4);
-    */
+    *//*
+
 
 }
+*/
 
 task_type_t NetworkPartitioning::getType() {
 	return TASK_NET_PARTITION;

@@ -5,6 +5,7 @@
 #include "measure_ocalls.h"
 #include <Enclave_u.h>
 #include "enclave/performance/Measurements.h"
+#include "performance/Measurements.h"
 #include <algorithm>
 
 void ocall_startJoin(){
@@ -233,4 +234,8 @@ void ocall_printMeasurements(uint32_t numberOfNodes, uint32_t nodeId){
 }
 void ocall_storeAllMeasurements(){
     hpcjoin::performance::Measurements::storeAllMeasurements();
+}
+
+void ocall_setResultCounter(uint64_t counter){
+    hpcjoin::performance::Measurements::saveResultCounter(counter);
 }

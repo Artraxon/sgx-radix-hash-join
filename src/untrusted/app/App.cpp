@@ -2,6 +2,7 @@
 #include "sgx_urts.h"
 #include "Lib/Logger.h"
 #include "Enclave_u.h"
+#include <unistd.h>
 
 #include <Lib/ErrorSupport.h>
 
@@ -36,5 +37,15 @@ int initialize_enclave(void)
 #endif
     return 0;
 }
+
 int SGX_CDECL main(int argc, char *argv[])
-{ }
+{
+    printf("Started Program\n");
+    volatile int i = 0;
+    while (i == 0){
+        sleep(5);
+    }
+    printf("Left Spin-Lock\n");
+    initialize_enclave();
+    ecall_start_hash_join(global_eid);
+}

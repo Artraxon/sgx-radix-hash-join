@@ -6,9 +6,9 @@
 
 #include "SgxPartitioning.h"
 
-#include <immintrin.h>
 #include <stdlib.h>
 #include <string.h>
+#include <algorithm>
 
 #include <core/Configuration.h>
 #include <data/CompressedTuple.h>
