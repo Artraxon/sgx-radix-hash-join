@@ -126,11 +126,6 @@ void ecall_start_hash_join(arguments* passed_args){
 
 	ocall_MPI_Barrier();
 
-	for (std::map<uint64_t , uint16_t>::iterator it = hpcjoin::tasks::BuildProbe::joinHistogram.begin(); it != hpcjoin::tasks::BuildProbe::joinHistogram.end(); ++it)
-	{
-        int k = 0;
-	}
-
 
 	JOIN_DEBUG("Main", "Node %d finalizing measurements", nodeId);
 
