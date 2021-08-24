@@ -14,16 +14,19 @@
 #include <operators/HashJoin.h>
 #include <core/Configuration.h>
 #include "../shared/utils/Debug.h"
+#include <tasks/BuildProbe.h>
 #include <memory/Pool.h>
+#include <utils/OcallWrappers.h>
 
 
-void ecall_start_hash_join(){
+void ecall_start_hash_join(arguments* passed_args){
+
+    //Save parameters in global variable
+    hpcjoin::core::Configuration::setupConfig(*passed_args);
 
     JOIN_MEM_DEBUG("Main Start");
 
 	JOIN_DEBUG("Main", "Initializing MPI");
-
-	ocall_MPI_Init();
 
 #ifdef USE_FOMPI
 	foMPI_Init(NULL, NULL);
@@ -67,8 +70,8 @@ void ecall_start_hash_join(){
 	uint64_t globalOuterRelationSize = ((uint64_t) numberOfNodes) * 200000;
 */
 
-    uint64_t globalInnerRelationSize = ((uint64_t) numberOfNodes) * 2000;
-    uint64_t globalOuterRelationSize = ((uint64_t) numberOfNodes) * 2000;
+    uint64_t globalInnerRelationSize = ((uint64_t) numberOfNodes) * passed_args->tuples_per_node;
+    uint64_t globalOuterRelationSize = ((uint64_t) numberOfNodes) * passed_args->tuples_per_node;
 
     uint64_t localInnerRelationSize =
 			(nodeId < numberOfNodes - 1) ? (globalInnerRelationSize / numberOfNodes) : (globalInnerRelationSize - (numberOfNodes - 1) * (globalInnerRelationSize / numberOfNodes));
@@ -122,6 +125,12 @@ void ecall_start_hash_join(){
 	JOIN_DEBUG("Main", "Node %d finished join", nodeId);
 
 	ocall_MPI_Barrier();
+
+	for (std::map<uint64_t , uint16_t>::iterator it = hpcjoin::tasks::BuildProbe::joinHistogram.begin(); it != hpcjoin::tasks::BuildProbe::joinHistogram.end(); ++it)
+	{
+        int k = 0;
+	}
+
 
 	JOIN_DEBUG("Main", "Node %d finalizing measurements", nodeId);
 

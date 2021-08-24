@@ -25,6 +25,7 @@ public:
 	void computeGlobalHistogram();
 	uint64_t* getGlobalHistogram();
 	uint64_t* getSealedSizes();
+	uint64_t getSealedSizesCount();
 
 protected:
 
@@ -32,13 +33,14 @@ protected:
 	hpcjoin::histograms::AssignmentMap* assignmentMap;
     uint64_t* values;
     uint64_t* sealedSizes;
-
+    uint64_t sealedSizesCount;
+    uint64_t sealedSizesSize;
     uint32_t numberOfNodes;
     uint32_t nodeID;
 
 protected:
 
-    void prepareSendBuffer(int* sendDisp, uint64_t * sendBuf);
+    void prepareSendBuffer(int* sendDisp, uint64_t * sendBuf, uint64_t* data);
 
 };
 

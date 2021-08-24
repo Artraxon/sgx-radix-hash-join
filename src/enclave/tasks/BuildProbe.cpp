@@ -29,6 +29,8 @@
 namespace hpcjoin {
 namespace tasks {
 
+std::map<uint64_t, uint16_t> BuildProbe::joinHistogram;
+
 BuildProbe::BuildProbe(uint64_t innerPartitionSize, hpcjoin::data::CompressedTuple *innerPartition, uint64_t outerPartitionSize, hpcjoin::data::CompressedTuple *outerPartition) {
 
 	this->innerPartitionSize = innerPartitionSize;
@@ -105,6 +107,7 @@ ocall_startBuildProbeProbe();
 		for(uint64_t hit = hashTableBucket[idx]; hit > 0; hit = hashTableNext[hit-1]){
 			if((outerPartition[t].value >> keyShift) == (innerPartition[hit-1].value >> keyShift)){
 				++matches;
+				joinHistogram[outerPartition[t].value >> keyShift] += 1;
 			}
 		}
 	}

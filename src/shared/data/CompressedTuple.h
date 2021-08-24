@@ -8,6 +8,8 @@
 #ifndef HPCJOIN_DATA_COMPRESSEDTUPLE_H_
 #define HPCJOIN_DATA_COMPRESSEDTUPLE_H_
 
+#include <stdint.h>
+
 namespace hpcjoin {
 namespace data {
 

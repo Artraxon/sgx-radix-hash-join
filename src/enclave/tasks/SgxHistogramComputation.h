@@ -56,6 +56,9 @@ public:
 
     uint64_t *getInnerSealedSizes();
     uint64_t *getOuterSealedSizes();
+
+    uint64_t getInnerSealedSizesCount();
+    uint64_t getOuterSealedSizesCount();
 protected:
 
 	uint32_t nodeId;

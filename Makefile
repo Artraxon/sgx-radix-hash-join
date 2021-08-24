@@ -10,7 +10,8 @@ ROOT_DIR			:= $(shell pwd)
 
 SGX_SDK				= /home/leonhard/packages/sgxsdk
 MPI_FOLDER			= /usr
-COMPILER_FLAGS 		= -O3 -std=c++0x -mavx -lpthread -lpapi -D MEASUREMENT_DETAILS_HISTOGRAM -D MEASUREMENT_DETAILS_NETWORK -D MEASUREMENT_DETAILS_LOCALPART -D MEASUREMENT_DETAILS_LOCALBP
+#TODO Change Optimization Level back to -03
+COMPILER_FLAGS 		= -O0 -std=c++0x -mavx -lpthread -lpapi -D MEASUREMENT_DETAILS_HISTOGRAM -D MEASUREMENT_DETAILS_NETWORK -D MEASUREMENT_DETAILS_LOCALPART -D MEASUREMENT_DETAILS_LOCALBP
 PAPI_FOLDER			= /bin
 CC					= /usr/bin/gcc
 CXX					= $(CC)
@@ -97,7 +98,8 @@ App_Include_Paths := -I$(SGX_SDK)/include \
 App_C_Flags := -fPIC -fopenmp -Wno-attributes $(App_Include_Paths) \
 			   -DOMPI_IGNORE_CXX_SEEK -DNATIVE_COMPILATION \
 			   -D MEASUREMENT_DETAILS_HISTOGRAM -D MEASUREMENT_DETAILS_NETWORK \
-			   -D MEASUREMENT_DETAILS_LOCALPART -D MEASUREMENT_DETAILS_LOCALBP
+			   -D MEASUREMENT_DETAILS_LOCALPART -D MEASUREMENT_DETAILS_LOCALBP \
+			   -D UNTRUSTED
 
 App_C_Flags += $(CFLAGS)
 
@@ -271,7 +273,7 @@ build/shared/trusted/%.o: src/shared/%.cpp
 
 
 generated/untrusted/Enclave_u.h: $(SGX_EDGER8R) src/enclave/Enclave.edl
-	@cd generated/untrusted && $(SGX_EDGER8R) --untrusted $(ROOT_DIR)/src/enclave/Enclave.edl --search-path $(ROOT_DIR)/src/enclave$(SOURCE_FOLDER)/$(ENCLAVE_FOLDER) --search-path $(SGX_SDK)/include
+	@cd generated/untrusted && $(SGX_EDGER8R) --untrusted $(ROOT_DIR)/src/enclave/Enclave.edl --search-path $(ROOT_DIR)/src/enclave$(SOURCE_FOLDER)/$(ENCLAVE_FOLDER) --search-path $(SGX_SDK)/include --search-path $(ROOT_DIR)/shared
 	@echo "GEN  =>  $@"
 
 generated/untrusted/Enclave_u.c: generated/untrusted/Enclave_u.h
@@ -299,7 +301,7 @@ $(App_Name): generated/untrusted/Enclave_u.o $(App_Cpp_Objects)
 ######## Enclave Objects ########
 
 generated/trusted/Enclave_t.h: $(SGX_EDGER8R) src/enclave/Enclave.edl
-	@cd generated/trusted && $(SGX_EDGER8R) --trusted $(ROOT_DIR)/src/enclave/Enclave.edl --search-path $(ROOT_DIR)/src/enclave$(SOURCE_FOLDER)/$(ENCLAVE_FOLDER) --search-path $(SGX_SDK)/include
+	@cd generated/trusted && $(SGX_EDGER8R) --trusted $(ROOT_DIR)/src/enclave/Enclave.edl --search-path $(ROOT_DIR)/src/enclave$(SOURCE_FOLDER)/$(ENCLAVE_FOLDER) --search-path $(SGX_SDK)/include --search-path $(ROOT_DIR)/shared
 	@echo "GEN  =>  $@"
 
 generated/trusted/Enclave_t.c: generated/trusted/Enclave_t.h

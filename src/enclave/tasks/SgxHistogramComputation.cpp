@@ -138,7 +138,15 @@ uint64_t* SgxHistogramComputation::getInnerSealedSizes(){
 }
 
 uint64_t* SgxHistogramComputation::getOuterSealedSizes(){
-        return this->outerRelationSgxGlobalHistogram->getSealedSizes();
+    return this->outerRelationSgxGlobalHistogram->getSealedSizes();
+}
+
+uint64_t SgxHistogramComputation::getInnerSealedSizesCount(){
+    return this->innerRelationSgxGlobalHistogram->getSealedSizesCount();
+}
+
+uint64_t SgxHistogramComputation::getOuterSealedSizesCount(){
+    return this->outerRelationSgxGlobalHistogram->getSealedSizesCount();
 }
 
 } /* namespace tasks */

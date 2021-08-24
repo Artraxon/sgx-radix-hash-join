@@ -37,9 +37,10 @@ SgxLocalHistogram::~SgxLocalHistogram() {
 void SgxLocalHistogram::computeLocalHistogram() {
 
 #ifdef MEASUREMENT_DETAILS_HISTOGRAM
-    ocall_startHistogramLocalHistogramComputation();
+    //ocall_startHistogramLocalHistogramComputation();
 	//enclave::performance::Measurements::startHistogramSgxLocalHistogramComputation();
 #endif
+
 
 	for (uint32_t i = 0; i < hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT; ++i) {
 	    values[i] = sgx_calc_sealed_data_size(0, localHistogram[i] * sizeof(uint64_t));
@@ -48,7 +49,7 @@ void SgxLocalHistogram::computeLocalHistogram() {
 
 
 #ifdef MEASUREMENT_DETAILS_HISTOGRAM
-	ocall_stopHistogramLocalHistogramComputation(this->localSize);
+	//ocall_stopHistogramLocalHistogramComputation(this->localSize);
 	//enclave::performance::Measurements::stopHistogramSgxLocalHistogramComputation(numberOfElements);
 #endif
 

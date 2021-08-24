@@ -11,6 +11,7 @@
 
 #include <tasks/Task.h>
 #include <data/CompressedTuple.h>
+#include <map>
 
 namespace hpcjoin {
 namespace tasks {
@@ -26,6 +27,8 @@ public:
 
 	void execute();
 	task_type_t getType();
+
+	static std::map<uint64_t, uint16_t> joinHistogram;
 
 protected:
 

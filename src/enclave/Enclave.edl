@@ -39,11 +39,15 @@ enclave {
     from "sgx_tstdc.edl" import *;
     from "sgx_pthread.edl" import *;
 
+    include "core/Parameters.h"
+
     trusted {
-        public void ecall_start_hash_join();
+        public void ecall_start_hash_join([in] arguments* args);
 };
 
 untrusted {
+
+    include "core/Parameters.h"
         /*
         * ocall_print_string - invokes OCALL to display string buffer inside the enclave.
         *  [in]: copy the string buffer to App outside.
@@ -69,16 +73,15 @@ untrusted {
                             uint32_t target_rank, uint64_t target_disp, uint64_t target_count,
                             uint16_t windowNr);
 
-    void ocall_MPI_AllToAllv([in, count=partitions] uint64_t* input,
+    void ocall_MPI_AllToAllv([in, count=inputSize] uint64_t* input,
                              [in, count=nodes] int* sendCounts, [in, count=nodes] int* sendDisp,
                              [out, count=outputSize] uint64_t* output,
                              [in, count=nodes] int* recCounts, [in, count=nodes] int* recDisp,
-                             uint64_t partitions, uint32_t nodes, uint64_t outputSize);
+                             uint64_t inputSize, uint32_t nodes, uint64_t outputSize);
 
     void ocall_MPI_Win_flush_local(uint32_t targetProcess, uint16_t windowNr);
 	void ocall_MPI_Win_flush_local_all(uint16_t windowNr);
 	void ocall_MPI_Barrier();
-	void ocall_MPI_Init();
 	void ocall_MPI_Comm_size([out, count=1] int32_t* size);
 	void ocall_MPI_Comm_rank([out, count=1] int32_t* rank);
 	void ocall_MPI_Finalize();

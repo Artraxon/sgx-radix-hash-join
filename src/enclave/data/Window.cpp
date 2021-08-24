@@ -11,14 +11,22 @@
 #include <Enclave_t.h>
 #include <sgx_tseal.h>
 #include <cstring>
-
+#include <core/Parameters.h>
 #include <unistd.h>
+#include <algorithm>
 
 namespace hpcjoin {
 namespace data {
 
+uint64_t Window::writtenTuples = 0;
+uint64_t Window::writtenEncryptedData = 0;
+
+uint64_t Window::receivedTuples = 0;
+uint64_t Window::receivedEncryptedData = 0;
+
+#define MODE (hpcjoin::core::Configuration::MODE)
 Window::Window(uint32_t numberOfNodes, uint32_t nodeId, histograms::AssignmentMap* assignment, uint64_t* localHistogram, uint64_t* globalHistogram, uint64_t* baseOffsets, uint64_t* writeOffsets,
-               uint64_t* sgxLocalHistogram, uint64_t* sgxGlobalHistogram, uint64_t* sgxBaseOffsets, uint64_t* sgxWriteOffsets, uint64_t* sealedSizes) {
+               uint64_t* sgxLocalHistogram, uint64_t* sgxGlobalHistogram, uint64_t* sgxBaseOffsets, uint64_t* sgxWriteOffsets, uint64_t* sealedSizes, uint64_t sealedSizesSum) {
 
 	this->numberOfNodes = numberOfNodes;
 	this->nodeId = nodeId;
@@ -34,7 +42,12 @@ Window::Window(uint32_t numberOfNodes, uint32_t nodeId, histograms::AssignmentMa
 	this->sgxBaseOffsets = sgxBaseOffsets;
 	this->sgxWriteOffsets = sgxWriteOffsets;
 
-	this->sealedSizes = sealedSizes;
+    if(MODE == CACHING){
+        this->sealedSizes = (uint64_t*) malloc(sealedSizesSum * sizeof(uint64_t));
+        this->stretchOutSealedSizes(sealedSizes);
+    } else {
+        this->sealedSizes = sealedSizes;
+    }
 
 	this->writeCounters = (uint64_t *) calloc(hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT, sizeof(uint64_t));
 
@@ -64,6 +77,17 @@ Window::Window(uint32_t numberOfNodes, uint32_t nodeId, histograms::AssignmentMa
 
 }
 
+void Window::stretchOutSealedSizes(uint64_t* sealedSizes){
+    uint64_t sealedPackageSize = sgx_calc_sealed_data_size(0, core::Configuration::MEMORY_BUFFER_SIZE_BYTES);
+
+    uint64_t offset = 0;
+    for (int i = 0; i < numberOfNodes * nodePartitionHistogram[nodeId]; ++i) {
+        std::fill(this->sealedSizes + offset, this->sealedSizes + offset + sealedSizes[i * CACHING], sealedPackageSize);
+        offset += sealedSizes[i * CACHING];
+        this->sealedSizes[offset] = sealedSizes[i * CACHING + 1];
+        offset++;
+    }
+}
 Window::~Window() {
     ocall_destroy_MPI_Window(winNr);
 /*
@@ -75,7 +99,11 @@ Window::~Window() {
 	MPI_Free_mem(data);
 */
 
-	free(this->writeCounters);
+    if(MODE == CACHING){
+        free(this->sealedSizes);
+    }
+
+    free(this->writeCounters);
 	//free(this->window);
 
 }
@@ -110,6 +138,7 @@ void Window::write(uint32_t partitionId, CompressedTuple* tuples, uint64_t sizeI
 	//JOIN_DEBUG("Window", "Initializing write for partition %d of %lu tuples", partitionId, sizeInTuples);
 
 
+	writtenTuples += sizeInTuples;
 #ifdef MEASUREMENT_DETAILS_NETWORK
     ocall_startNetworkPartitioningWindowPut();
 	//enclave::performance::Measurements::startNetworkPartitioningWindowPut();
@@ -127,6 +156,7 @@ void Window::write(uint32_t partitionId, CompressedTuple* tuples, uint64_t sizeI
 	JOIN_ASSERT(targetOffset + sizeInTuples <= remoteSize, "Window", "Target offset and size is outside window range");
 
 	uint32_t encryptedSize = sgx_calc_sealed_data_size(0, sizeInTuples * sizeof(CompressedTuple));
+	writtenEncryptedData += encryptedSize;
 	auto *buffer = static_cast<sgx_sealed_data_t *>(malloc(encryptedSize));
     sgx_seal_data(0, nullptr, sizeInTuples * sizeof(CompressedTuple), reinterpret_cast<const uint8_t *>(tuples), encryptedSize, buffer);
     void *untrustedBuffer;
@@ -179,12 +209,14 @@ void Window::unsealData() {
     uint64_t currentEncryptedOffset = 0;
     uint64_t currentDecryptedOffset = 0;
 
-    for (int i = 0; i < entries; ++i) {
+    for (int i = 0; i < entries * MODE; ++i) {
         sgx_sealed_data_t* currentEncryptedData = (sgx_sealed_data_t *) (enclaveEncryptedData + currentEncryptedOffset);
         uint8_t* currentDecrpytedData = ((uint8_t*) this->data) + currentDecryptedOffset;
         uint32_t decryptedSize = sgx_get_encrypt_txt_len(currentEncryptedData);
         sgx_unseal_data(currentEncryptedData, nullptr, 0, currentDecrpytedData, &decryptedSize);
         currentEncryptedOffset += this->sealedSizes[i];
+        receivedEncryptedData += this->sealedSizes[i];
+        receivedTuples += decryptedSize / sizeof(hpcjoin::data::CompressedTuple);
         currentDecryptedOffset += decryptedSize;
     }
 }

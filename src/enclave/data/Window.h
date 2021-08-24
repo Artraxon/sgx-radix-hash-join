@@ -27,7 +27,7 @@ public:
 
     Window(uint32_t numberOfNodes, uint32_t nodeId, histograms::AssignmentMap* assignment,
            uint64_t* localHistogram, uint64_t* globalHistogram, uint64_t* baseOffsets, uint64_t* writeOffsets,
-           uint64_t* sgxLocalHistogram, uint64_t* sgxGlobalHistogram, uint64_t* sgxBaseOffsets, uint64_t* sgxWriteOffsets, uint64_t* sealedSizes);
+           uint64_t* sgxLocalHistogram, uint64_t* sgxGlobalHistogram, uint64_t* sgxBaseOffsets, uint64_t* sgxWriteOffsets, uint64_t* sealedSizes, uint64_t sealedSizesSum);
 	~Window();
 
 public:
@@ -46,6 +46,12 @@ public:
 	CompressedTuple *getPartition(uint32_t partitionId);
 	uint64_t getPartitionSize(uint32_t partitionId);
 
+	static uint64_t writtenTuples;
+	static uint64_t writtenEncryptedData;
+
+    static uint64_t receivedTuples;
+    static uint64_t receivedEncryptedData;
+
 public:
 
 	std::pair<uint64_t, uint64_t> computeLocalWindowSize();
@@ -63,6 +69,8 @@ protected:
 	hpcjoin::data::CompressedTuple *data;
 	void* encryptedData;
 	uint16_t winNr;
+
+	void stretchOutSealedSizes(uint64_t* sealedSizes);
 
 	#ifdef USE_FOMPI
 	//foMPI_Win *window;

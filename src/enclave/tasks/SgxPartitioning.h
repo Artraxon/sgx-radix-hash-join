@@ -4,8 +4,8 @@
  *
  */
 
-#ifndef HPCJOIN_TASKS_NETWORKPARTITIONING_H_
-#define HPCJOIN_TASKS_NETWORKPARTITIONING_H_
+#ifndef HPCJOIN_TASKS_SGXPARTITIONING_H_
+#define HPCJOIN_TASKS_SGXPARTITIONING_H_
 
 #include <tasks/Task.h>
 #include <data/Window.h>

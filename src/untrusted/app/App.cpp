@@ -3,6 +3,8 @@
 #include "Lib/Logger.h"
 #include "Enclave_u.h"
 #include <unistd.h>
+#include <mpi/mpi.h>
+#include <enclave/Parsing.h>
 
 #include <Lib/ErrorSupport.h>
 
@@ -42,10 +44,11 @@ int SGX_CDECL main(int argc, char *argv[])
 {
     printf("Started Program\n");
     volatile int i = 0;
-    while (i == 0){
-        sleep(5);
+    while (i == 1){
+        sleep(2);
     }
-    printf("Left Spin-Lock\n");
+    arguments args = parseArgs(argc, argv);
+    MPI_Init(&argc, &argv);
     initialize_enclave();
-    ecall_start_hash_join(global_eid);
+    ecall_start_hash_join(global_eid, &args);
 }

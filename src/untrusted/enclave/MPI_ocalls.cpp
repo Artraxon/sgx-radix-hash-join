@@ -5,6 +5,8 @@
 #include <mpi/mpi.h>
 #include <unordered_map>
 #include <utils/Debug.h>
+#include <core/Parameters.h>
+#include "Parsing.h"
 
 class MPIWinWrapper{
 protected:
@@ -88,7 +90,7 @@ void ocall_MPI_AllToAllv(uint64_t* input,
                          int* sendCounts, int* sendDisp,
                          uint64_t* output,
                          int* recCounts, int* recDisp,
-                         uint64_t partitions, uint32_t nodes, uint64_t outputSize){
+                         uint64_t inputSize, uint32_t nodes, uint64_t outputSize){
     MPI_Alltoallv(input, sendCounts, sendDisp, MPI_UINT64_T, output, recCounts, recDisp, MPI_UINT64_T, MPI_COMM_WORLD);
 }
 
@@ -113,8 +115,11 @@ void ocall_MPI_Win_flush_local_all(uint16_t windowNr){
 void ocall_MPI_Barrier(){
     MPI_Barrier(MPI_COMM_WORLD);
 }
-void ocall_MPI_Init(){
-    MPI_Init(NULL, NULL);
+
+void ocall_MPI_Init(arguments* out){
+    int argc;
+    char** argv;
+    *out = parseArgs(argc, argv);
 }
 
 void ocall_MPI_Comm_size(int32_t* size){

@@ -19,7 +19,7 @@
 #include <utils/Debug.h>
 #include <memory/Pool.h>
 #include <data/CompressedTuple.h>
-
+#include <core/Parameters.h>
 #include <Enclave_t.h>
 
 namespace hpcjoin {
@@ -28,6 +28,7 @@ namespace operators {
 uint64_t HashJoin::RESULT_COUNTER = 0;
 std::queue<hpcjoin::tasks::Task *> HashJoin::TASK_QUEUE;
 
+#define MODE (hpcjoin::core::Configuration::MODE)
 HashJoin::HashJoin(uint32_t numberOfNodes, uint32_t nodeId, hpcjoin::data::Relation *innerRelation, hpcjoin::data::Relation *outerRelation) {
 
 	this->nodeId = nodeId;
@@ -83,14 +84,14 @@ void HashJoin::join() {
 			histogramComputation->getInnerRelationWriteOffsets(),
 			sgxHistogramComputation->getInnerRelationSgxLocalHistogram(), sgxHistogramComputation->getInnerRelationSgxGlobalHistogram(),
 			sgxHistogramComputation->getInnerRelationBaseOffsets(), sgxHistogramComputation->getInnerRelationWriteOffsets(),
-			sgxHistogramComputation->getInnerSealedSizes());
+			sgxHistogramComputation->getInnerSealedSizes(), sgxHistogramComputation->getInnerSealedSizesCount());
 
 	hpcjoin::data::Window *outerWindow = new hpcjoin::data::Window(this->numberOfNodes, this->nodeId, histogramComputation->getAssignmentMap(),
 			histogramComputation->getOuterRelationLocalHistogram(), histogramComputation->getOuterRelationGlobalHistogram(), histogramComputation->getOuterRelationBaseOffsets(),
 			histogramComputation->getOuterRelationWriteOffsets(),
 			sgxHistogramComputation->getOuterRelationSgxLocalHistogram(), sgxHistogramComputation->getOuterRelationSgxGlobalHistogram(),
 			sgxHistogramComputation->getOuterRelationBaseOffsets(), sgxHistogramComputation->getOuterRelationWriteOffsets(),
-			sgxHistogramComputation->getOuterSealedSizes());
+			sgxHistogramComputation->getOuterSealedSizes(), sgxHistogramComputation->getOuterSealedSizesCount());
 
 	ocall_stopWindowAllocation();
 	//hpcjoin::performance::Measurements::stopWindowAllocation();
@@ -103,10 +104,18 @@ void HashJoin::join() {
 	 */
 
 	ocall_startNetworkPartitioning();
+	if(MODE == NOCACHING){
+        hpcjoin::tasks::SgxPartitioning *networkPartitioning = new hpcjoin::tasks::SgxPartitioning(this->nodeId, this->innerRelation, this->outerRelation, innerWindow,
+                                                                                                   outerWindow, histogramComputation->getInnerLocalOffsets(), histogramComputation->getOuterLocalOffsets());
+	    networkPartitioning->execute();
+        delete networkPartitioning;
+	} else {
+        hpcjoin::tasks::NetworkPartitioning *networkPartitioning =
+                new hpcjoin::tasks::NetworkPartitioning(this->nodeId, this->innerRelation, this->outerRelation, innerWindow, outerWindow);
+        networkPartitioning->execute();
+        delete networkPartitioning;
+    }
 	//hpcjoin::performance::Measurements::startNetworkPartitioning();
-	hpcjoin::tasks::SgxPartitioning *networkPartitioning = new hpcjoin::tasks::SgxPartitioning(this->nodeId, this->innerRelation, this->outerRelation, innerWindow,
-			outerWindow, histogramComputation->getInnerLocalOffsets(), histogramComputation->getOuterLocalOffsets());
-	networkPartitioning->execute();
 	ocall_stopNetworkPartitioning();
 	//hpcjoin::performance::Measurements::stopNetworkPartitioning();
 	JOIN_MEM_DEBUG("Network phase completed");
@@ -166,7 +175,6 @@ void HashJoin::join() {
 
 	// Delete the network related computation
 	delete histogramComputation;
-	delete networkPartitioning;
 
 	JOIN_MEM_DEBUG("Local phase prepared");
 

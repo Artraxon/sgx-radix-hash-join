@@ -10,8 +10,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#ifndef NATIVE_COMPILATION
+#ifndef UNTRUSTED
 #include "Enclave_t.h"
+#include <utils/OcallWrappers.h>
+#define stdout 1
+#define stderr 2
+
 #else
 #include <enclave/performance/Measurements.h>
 #endif

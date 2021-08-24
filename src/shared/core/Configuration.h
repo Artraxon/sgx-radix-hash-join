@@ -8,6 +8,7 @@
 #define HPCJOIN_CORE_CONFIGURATION_H_
 
 #include <stdint.h>
+#include <core/Parameters.h>
 
 namespace hpcjoin {
 namespace core {
@@ -18,17 +19,19 @@ public:
 
 	static const uint32_t RESULT_AGGREGATION_NODE = 0;
 
-	static const uint32_t CACHELINE_SIZE_BYTES = 64;
-	static const uint32_t CACHELINES_PER_MEMORY_BUFFER = 1024;
+	static uint32_t CACHELINE_SIZE_BYTES;
+	static uint32_t CACHELINES_PER_MEMORY_BUFFER;
 	static const uint32_t MEMORY_BUFFERS_PER_PARTITION = 2;
 
-	static const uint64_t MEMORY_BUFFER_SIZE_BYTES = CACHELINES_PER_MEMORY_BUFFER * CACHELINE_SIZE_BYTES;
-	static const uint64_t MEMORY_PARTITION_SIZE_BYTES = MEMORY_BUFFERS_PER_PARTITION * MEMORY_BUFFER_SIZE_BYTES;
+	static uint16_t MODE;
+
+	static uint64_t MEMORY_BUFFER_SIZE_BYTES;
+	static uint64_t MEMORY_PARTITION_SIZE_BYTES;
 
 	static const bool ENABLE_TWO_LEVEL_PARTITIONING = true;
 
-	static const uint64_t NETWORK_PARTITIONING_FANOUT = 10;
-	static const uint64_t LOCAL_PARTITIONING_FANOUT = 10;
+	static const uint64_t NETWORK_PARTITIONING_FANOUT = 5;
+	static const uint64_t LOCAL_PARTITIONING_FANOUT = 1;
 
 	static const uint64_t NETWORK_PARTITIONING_COUNT = (1 << NETWORK_PARTITIONING_FANOUT);
 	static const uint64_t LOCAL_PARTITIONING_COUNT = (1 << LOCAL_PARTITIONING_FANOUT);
@@ -37,9 +40,11 @@ public:
 
 	static const uint32_t PAYLOAD_BITS = 27;
 
+    static void setupConfig(arguments args);
 };
 
 } /* namespace core */
 } /* namespace enclave */
+
 
 #endif /* HPCJOIN_CORE_CONFIGURATION_H_ */

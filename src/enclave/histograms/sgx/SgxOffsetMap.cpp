@@ -5,12 +5,10 @@
  */
 
 #include "SgxOffsetMap.h"
-
 #include <stdlib.h>
-
 #include <core/Configuration.h>
-
 #include <Enclave_t.h>
+
 namespace hpcjoin {
 namespace histograms {
 
@@ -38,7 +36,7 @@ SgxOffsetMap::~SgxOffsetMap() {
 void SgxOffsetMap::computeOffsets() {
 
 #ifdef MEASUREMENT_DETAILS_HISTOGRAM
-    ocall_startHistogramOffsetComputation();
+    //ocall_startHistogramOffsetComputation();
 	//enclave::performance::Measurements::startHistogramOffsetComputation();
 #endif
 
@@ -47,7 +45,7 @@ void SgxOffsetMap::computeOffsets() {
 	computeAbsolutePrivateOffsets();
 
 #ifdef MEASUREMENT_DETAILS_HISTOGRAM
-	ocall_stopHistogramOffsetComputation();
+	//ocall_stopHistogramOffsetComputation();
 	//enclave::performance::Measurements::stopHistogramOffsetComputation();
 #endif
 
