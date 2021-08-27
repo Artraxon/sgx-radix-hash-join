@@ -42,11 +42,6 @@ int initialize_enclave(void)
 
 int SGX_CDECL main(int argc, char *argv[])
 {
-    printf("Started Program\n");
-    volatile int i = 0;
-    while (i == 1){
-        sleep(2);
-    }
     arguments args = parseArgs(argc, argv);
     MPI_Init(&argc, &argv);
     initialize_enclave();
