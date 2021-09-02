@@ -9,9 +9,11 @@
 
 #include <stdint.h>
 #include <queue>
+#include <map>
 
 #include <data/Relation.h>
 #include <tasks/Task.h>
+#include <data/CompressedTuple.h>
 
 
 namespace hpcjoin {
@@ -36,11 +38,14 @@ protected:
 	hpcjoin::data::Relation *innerRelation;
 	hpcjoin::data::Relation *outerRelation;
 
+    void countRadix(hpcjoin::data::CompressedTuple* input, uint64_t size);
+
 public:
 
 	static uint64_t RESULT_COUNTER;
 	static std::queue<hpcjoin::tasks::Task *> TASK_QUEUE;
 
+    static std::map<uint64_t, uint64_t> partitionHistogram;
 
 };
 

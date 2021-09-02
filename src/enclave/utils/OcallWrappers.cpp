@@ -30,9 +30,20 @@ void fprintf(const int FILE, const char *format, ...){
     delete[] format_w;
     wcstombs(out, buffer, wcslen(buffer));
 
-    ocall_print_string(FILE, out);
+    ocall_printf_string(FILE, out);
     va_end (args);
 
+}
+
+int printf(const char* fmt, ...)
+{
+    char buf[BUFSIZ] = { '\0' };
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(buf, BUFSIZ, fmt, ap);
+            va_end(ap);
+    ocall_print_string(buf);
+    return (int)strnlen(buf, BUFSIZ - 1) + 1;
 }
 void fflush(const int FILE){
     ocall_fflush(FILE);

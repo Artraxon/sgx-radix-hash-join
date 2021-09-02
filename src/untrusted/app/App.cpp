@@ -25,10 +25,12 @@ struct timespec ts_start;
 int initialize_enclave(void)
 {
     sgx_status_t ret = SGX_ERROR_UNEXPECTED;
+    sgx_launch_token_t token = {0};
+    int updated = 0;
 
     /* Call sgx_create_enclave to initialize an enclave instance */
     /* Debug Support: set 2nd parameter to 1 */
-    ret = sgx_create_enclave(ENCLAVE_FILENAME, SGX_DEBUG_FLAG, NULL, NULL, &global_eid, NULL);
+    ret = sgx_create_enclave(ENCLAVE_FILENAME, SGX_DEBUG_FLAG, &token, &updated, &global_eid, NULL);
     if (ret != SGX_SUCCESS) {
         ret_error_support(ret);
         return -1;
@@ -42,6 +44,10 @@ int initialize_enclave(void)
 
 int SGX_CDECL main(int argc, char *argv[])
 {
+    volatile int i = 0;
+    while (i == 1){
+        sleep(2);
+    }
     arguments args = parseArgs(argc, argv);
     MPI_Init(&argc, &argv);
     initialize_enclave();

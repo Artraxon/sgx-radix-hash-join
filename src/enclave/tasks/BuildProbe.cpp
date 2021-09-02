@@ -30,6 +30,10 @@ namespace hpcjoin {
 namespace tasks {
 
 
+    std::map<uint64_t, uint64_t> BuildProbe::joinHistogram;
+    std::queue<std::tuple<uint64_t, uint64_t>> BuildProbe::partitionSizeQueue;
+    std::map<std::tuple<uint64_t, uint64_t>, uint64_t> BuildProbe::partitionSizes;
+
 BuildProbe::BuildProbe(uint64_t innerPartitionSize, hpcjoin::data::CompressedTuple *innerPartition, uint64_t outerPartitionSize, hpcjoin::data::CompressedTuple *outerPartition) {
 
 	this->innerPartitionSize = innerPartitionSize;
@@ -37,6 +41,10 @@ BuildProbe::BuildProbe(uint64_t innerPartitionSize, hpcjoin::data::CompressedTup
 
 	this->outerPartitionSize = outerPartitionSize;
 	this->outerPartition = outerPartition;
+
+    auto tuple = std::tuple<uint64_t, uint64_t>(innerPartitionSize, outerPartitionSize);
+    partitionSizeQueue.push(tuple);
+    partitionSizes[tuple] += 1;
 
 }
 
@@ -86,7 +94,8 @@ void BuildProbe::execute() {
 		uint64_t idx = HASH_BIT_MODULO(innerPartition[t].value, MASK, shiftBits);
 		hashTableNext[t] = hashTableBucket[idx];
 		hashTableBucket[idx]  = ++t;
-	}
+        joinHistogram[idx] += 1;
+    }
 
 #ifdef MEASUREMENT_DETAILS_LOCALBP
 ocall_stopBuildProbeBuild(this->innerPartitionSize);

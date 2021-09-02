@@ -69,7 +69,7 @@ endif
 SGX_COMMON_FLAGS += -Wall -Wextra -Winit-self -Wpointer-arith -Wreturn-type \
                     -Waddress -Wsequence-point -Wformat-security \
                     -Wmissing-include-dirs -Wfloat-equal -Wundef -Wshadow \
-                    -Wcast-align -Wcast-qual -Wconversion -Wredundant-decls -O3
+                    -Wcast-align -Wcast-qual -Wconversion -Wredundant-decls -O0 -fno-inline-functions
 SGX_COMMON_CFLAGS := $(SGX_COMMON_FLAGS) -Wjump-misses-init -Wstrict-prototypes -Wunsuffixed-float-constants -v
 SGX_COMMON_CXXFLAGS := $(SGX_COMMON_FLAGS) -Wnon-virtual-dtor -std=c++11
 
@@ -99,7 +99,7 @@ App_C_Flags := -fPIC -fopenmp -Wno-attributes $(App_Include_Paths) \
 			   -DOMPI_IGNORE_CXX_SEEK -DNATIVE_COMPILATION \
 			   -D MEASUREMENT_DETAILS_HISTOGRAM -D MEASUREMENT_DETAILS_NETWORK \
 			   -D MEASUREMENT_DETAILS_LOCALPART -D MEASUREMENT_DETAILS_LOCALBP \
-			   -D UNTRUSTED
+			   -D UNTRUSTED -DOMPI_SKIP_MPICXX
 
 App_C_Flags += $(CFLAGS)
 
@@ -327,7 +327,7 @@ $(Enclave_Name): generated/trusted/Enclave_t.o $(Enclave_Cpp_Objects)
 	@echo "LINK =>  $@"
 
 $(Signed_Enclave_Name): $(Enclave_Name)
-	@$(SGX_ENCLAVE_SIGNER) sign -key src/enclave/Enclave_private_test.pem -enclave $(RELEASE_FOLDER)/$(Enclave_Name) -out $(RELEASE_FOLDER)/$@ -config $(Enclave_Config_File)
+	$(SGX_ENCLAVE_SIGNER) sign -key src/enclave/Enclave_private_test.pem -enclave $(RELEASE_FOLDER)/$(Enclave_Name) -out $(RELEASE_FOLDER)/$@ -config $(Enclave_Config_File)
 	@echo "SIGN =>  $@"
 ########################################
 

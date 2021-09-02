@@ -192,8 +192,12 @@ untrusted {
 
 	uint64_t ocall_rand();
 	void ocall_srand(uint64_t seed);
-    void ocall_print_string(int out, [in, string] const char *str);
+    void ocall_printf_string(int out, [in, string] const char *str);
+    void ocall_print_string([in, string] const char *str);
     void ocall_fflush(int out);
     void ocall_gethostname([out, count=len] char *name, int len);
+    void ocall_print_file([in, count=len] uint8_t* values, uint64_t len);
+    void ocall_read_file([out, count=len] uint8_t* values, uint64_t len);
+    void ocall_get_file_len([out, count=1] int64_t* len);
     };
 };

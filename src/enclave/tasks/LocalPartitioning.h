@@ -11,6 +11,7 @@
 
 #include <tasks/Task.h>
 #include <data/CompressedTuple.h>
+#include <map>
 
 namespace hpcjoin {
 namespace tasks {
@@ -27,6 +28,10 @@ public:
 	void execute();
 	task_type_t getType();
 
+    static std::map<uint64_t, uint64_t> partitionHistogram;
+    static std::map<uint64_t, uint64_t> partitionSizes;
+    static std::map<std::tuple<uint64_t, uint64_t>, uint64_t> fromPartitionToLocalPartition;
+    static uint64_t counter;
 protected:
 
 	uint64_t innerPartitionSize;

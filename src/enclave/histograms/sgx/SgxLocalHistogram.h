@@ -26,10 +26,13 @@ public:
 
 	uint64_t* getLocalHistogram();
 
+    uint64_t* getPackageHistogram();
+
 protected:
 
-	uint64_t * localHistogram;
+	uint64_t* localHistogram;
 	uint64_t* values;
+    uint64_t* packageValues;
 
 	uint32_t numberOfNodes;
 	uint64_t localSize;

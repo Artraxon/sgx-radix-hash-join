@@ -97,7 +97,7 @@ void SgxPartitioning::partition(hpcjoin::data::Relation *relation,
 	ocall_startNetworkPartitioningMemoryAllocation();
 #endif
 
-	hpcjoin::data::CompressedTuple* inMemoryBuffer = (hpcjoin::data::CompressedTuple *) calloc(offsets[hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT - 1],
+	hpcjoin::data::CompressedTuple* inMemoryBuffer = (hpcjoin::data::CompressedTuple *) calloc(offsets[hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT],
                                             sizeof(hpcjoin::data::CompressedTuple));
 
     JOIN_ASSERT(inMemoryBuffer != NULL, "Network Partitioning", "Could not allocate in-memory buffer");

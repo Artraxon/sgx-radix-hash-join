@@ -40,7 +40,7 @@ protected:
 
 protected:
 
-    void prepareSendBuffer(int* sendDisp, uint64_t * sendBuf, uint64_t* data);
+    void prepareSendBuffer(int* sendDisp, uint64_t * sendBuf);
 
 };
 

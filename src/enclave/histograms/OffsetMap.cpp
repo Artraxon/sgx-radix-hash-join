@@ -23,7 +23,8 @@ OffsetMap::OffsetMap(uint32_t numberOfProcesses, LocalHistogram* localHistogram,
 	this->baseOffsets = (uint64_t *) calloc(hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT, sizeof(uint64_t));
 	this->relativeWriteOffsets = (uint64_t *) calloc(hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT, sizeof(uint64_t));
 	this->absoluteWriteOffsets = (uint64_t *) calloc(hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT, sizeof(uint64_t));
-	this->localOffsets = (uint64_t *) calloc(hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT, sizeof(uint64_t));
+    //Last entry is for full sum
+	this->localOffsets = (uint64_t *) calloc(hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT + 1, sizeof(uint64_t));
 
 }
 
@@ -93,7 +94,7 @@ void OffsetMap::computeAbsolutePrivateOffsets() {
 void OffsetMap::computeLocalOffsets() {
 
     //First entry is omitted since the offset has to be zero
-    for(uint32_t i = 1; i < hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT; ++i){
+    for(uint32_t i = 1; i <= hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT; ++i){
         this->localOffsets[i] = this->localOffsets[i - 1] + this->localHistogram->getLocalHistogram()[i - 1];
     }
 }

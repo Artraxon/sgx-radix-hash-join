@@ -25,9 +25,11 @@
 namespace hpcjoin {
 namespace operators {
 
+#define HASH_BIT_MODULO(KEY, MASK, NBITS) (((KEY) & (MASK)) >> (NBITS))
 uint64_t HashJoin::RESULT_COUNTER = 0;
 std::queue<hpcjoin::tasks::Task *> HashJoin::TASK_QUEUE;
 
+std::map<uint64_t, uint64_t> HashJoin::partitionHistogram;
 #define MODE (hpcjoin::core::Configuration::MODE)
 HashJoin::HashJoin(uint32_t numberOfNodes, uint32_t nodeId, hpcjoin::data::Relation *innerRelation, hpcjoin::data::Relation *outerRelation) {
 
@@ -165,6 +167,9 @@ void HashJoin::join() {
 			hpcjoin::data::CompressedTuple *outerRelationPartition = outerWindow->getPartition(p);
 			uint64_t outerRelationPartitionSize = outerWindow->getPartitionSize(p);
 
+            countRadix(innerRelationPartition, innerRelationPartitionSize);
+            countRadix(outerRelationPartition, outerRelationPartitionSize);
+
 			if (hpcjoin::core::Configuration::ENABLE_TWO_LEVEL_PARTITIONING) {
 				TASK_QUEUE.push(new hpcjoin::tasks::LocalPartitioning(innerRelationPartitionSize, innerRelationPartition, outerRelationPartitionSize, outerRelationPartition));
 			} else {
@@ -173,6 +178,13 @@ void HashJoin::join() {
 		}
 	}
 
+    uint64_t joinHistogram[partitionHistogram.size()];
+    uint64_t i = 0;
+    for (std::map<uint64_t, uint64_t>::iterator it = partitionHistogram.begin(); it != partitionHistogram.end(); it++) {
+        uint64_t first = it->first;
+        uint64_t second = it->second;
+        joinHistogram[i++] = it->second;
+    }
 	// Delete the network related computation
 	delete histogramComputation;
 
@@ -227,6 +239,17 @@ void HashJoin::join() {
 		delete outerWindow;
 	}
 
+}
+
+void HashJoin::countRadix(hpcjoin::data::CompressedTuple* input, uint64_t size) {
+    uint64_t MASK = (hpcjoin::core::Configuration::LOCAL_PARTITIONING_COUNT - 1)
+            << (hpcjoin::core::Configuration::NETWORK_PARTITIONING_FANOUT + hpcjoin::core::Configuration::PAYLOAD_BITS);
+    for (uint64_t t = 0; t < size; ++t) {
+        uint64_t partitionId = HASH_BIT_MODULO(input[t].value, MASK,
+                                               hpcjoin::core::Configuration::NETWORK_PARTITIONING_FANOUT +
+                                               hpcjoin::core::Configuration::PAYLOAD_BITS);
+        partitionHistogram[partitionId] += 1;
+    }
 }
 
 } /* namespace operators */

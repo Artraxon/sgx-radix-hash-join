@@ -11,6 +11,7 @@
 #include <Enclave_t.h>
 #include <sgx_tseal.h>
 #include <cstring>
+#include <communication/Encryption.h>
 #include <core/Parameters.h>
 #include <unistd.h>
 #include <algorithm>
@@ -24,6 +25,7 @@ uint64_t Window::writtenEncryptedData = 0;
 uint64_t Window::receivedTuples = 0;
 uint64_t Window::receivedEncryptedData = 0;
 
+#define HASH_BIT_MODULO(KEY, MASK, NBITS) (((KEY) & (MASK)) >> (NBITS))
 #define MODE (hpcjoin::core::Configuration::MODE)
 Window::Window(uint32_t numberOfNodes, uint32_t nodeId, histograms::AssignmentMap* assignment, uint64_t* localHistogram, uint64_t* globalHistogram, uint64_t* baseOffsets, uint64_t* writeOffsets,
                uint64_t* sgxLocalHistogram, uint64_t* sgxGlobalHistogram, uint64_t* sgxBaseOffsets, uint64_t* sgxWriteOffsets, uint64_t* sealedSizes, uint64_t sealedSizesSum) {
@@ -43,10 +45,12 @@ Window::Window(uint32_t numberOfNodes, uint32_t nodeId, histograms::AssignmentMa
 	this->sgxWriteOffsets = sgxWriteOffsets;
 
     if(MODE == CACHING){
+        this->entries = sealedSizesSum;
         this->sealedSizes = (uint64_t*) malloc(sealedSizesSum * sizeof(uint64_t));
         this->stretchOutSealedSizes(sealedSizes);
     } else {
         this->sealedSizes = sealedSizes;
+        this->entries = nodePartitionHistogram[this->nodeId] * numberOfNodes;
     }
 
 	this->writeCounters = (uint64_t *) calloc(hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT, sizeof(uint64_t));
@@ -78,7 +82,7 @@ Window::Window(uint32_t numberOfNodes, uint32_t nodeId, histograms::AssignmentMa
 }
 
 void Window::stretchOutSealedSizes(uint64_t* sealedSizes){
-    uint64_t sealedPackageSize = sgx_calc_sealed_data_size(0, core::Configuration::MEMORY_BUFFER_SIZE_BYTES);
+    uint64_t sealedPackageSize = communication::Encryption::getEncryptedSize(core::Configuration::MEMORY_BUFFER_SIZE_BYTES);
 
     uint64_t offset = 0;
     for (int i = 0; i < numberOfNodes * nodePartitionHistogram[nodeId]; ++i) {
@@ -155,10 +159,10 @@ void Window::write(uint32_t partitionId, CompressedTuple* tuples, uint64_t sizeI
 	JOIN_ASSERT(targetOffset <= remoteSize, "Window", "Target offset is outside window range");
 	JOIN_ASSERT(targetOffset + sizeInTuples <= remoteSize, "Window", "Target offset and size is outside window range");
 
-	uint32_t encryptedSize = sgx_calc_sealed_data_size(0, sizeInTuples * sizeof(CompressedTuple));
+	uint32_t encryptedSize = communication::Encryption::getEncryptedSize(sizeInTuples * sizeof(CompressedTuple));
 	writtenEncryptedData += encryptedSize;
-	auto *buffer = static_cast<sgx_sealed_data_t *>(malloc(encryptedSize));
-    sgx_seal_data(0, nullptr, sizeInTuples * sizeof(CompressedTuple), reinterpret_cast<const uint8_t *>(tuples), encryptedSize, buffer);
+	auto *buffer = static_cast<uint8_t *>(malloc(encryptedSize));
+    communication::encryption->encrypt(reinterpret_cast<uint8_t *>(tuples), sizeInTuples * sizeof(CompressedTuple), buffer);
     void *untrustedBuffer;
     ocall_calloc_heap(&untrustedBuffer, encryptedSize);
     memcpy(untrustedBuffer, buffer, encryptedSize);
@@ -170,7 +174,7 @@ void Window::write(uint32_t partitionId, CompressedTuple* tuples, uint64_t sizeI
 	ocall_MPI_Put_Heap(untrustedBuffer, encryptedSize, targetProcess, targetOffset, encryptedSize, winNr);
 	#endif
 
-	this->writeCounters[partitionId] += sizeInTuples;
+	this->writeCounters[partitionId] += encryptedSize;
 	//JOIN_DEBUG("Window", "Partition %d has now %lu tuples", partitionId, this->writeCounters[partitionId]);
 
 	JOIN_ASSERT(this->writeCounters[partitionId] <= this->localSgxHistogram[partitionId], "Window",
@@ -204,20 +208,34 @@ void Window::unsealData() {
     uint8_t * enclaveEncryptedData = (uint8_t *) malloc(localSealedWindowSize);
     memcpy(enclaveEncryptedData, encryptedData, localSealedWindowSize);
 
-    int entries = nodePartitionHistogram[this->nodeId] * numberOfNodes;
-    this->data = (CompressedTuple*) malloc(this->localSealedWindowSize * sizeof(hpcjoin::data::CompressedTuple));
+    this->data = (CompressedTuple*) malloc(this->localWindowSize * sizeof(hpcjoin::data::CompressedTuple));
+    uint64_t writtenPerEntry[entries];
     uint64_t currentEncryptedOffset = 0;
     uint64_t currentDecryptedOffset = 0;
 
-    for (int i = 0; i < entries * MODE; ++i) {
-        sgx_sealed_data_t* currentEncryptedData = (sgx_sealed_data_t *) (enclaveEncryptedData + currentEncryptedOffset);
+    for (int i = 0; i < entries; ++i) {
+        uint8_t* currentEncryptedData = enclaveEncryptedData + currentEncryptedOffset;
         uint8_t* currentDecrpytedData = ((uint8_t*) this->data) + currentDecryptedOffset;
-        uint32_t decryptedSize = sgx_get_encrypt_txt_len(currentEncryptedData);
-        sgx_unseal_data(currentEncryptedData, nullptr, 0, currentDecrpytedData, &decryptedSize);
+        uint32_t decryptedSize = communication::Encryption::getDecryptedSize(this->sealedSizes[i]);
+        communication::encryption->decrypt(currentEncryptedData, decryptedSize, currentDecrpytedData);
         currentEncryptedOffset += this->sealedSizes[i];
         receivedEncryptedData += this->sealedSizes[i];
-        receivedTuples += decryptedSize / sizeof(hpcjoin::data::CompressedTuple);
+        uint64_t tuples = decryptedSize / sizeof(hpcjoin::data::CompressedTuple);
+        receivedTuples += tuples;
+        writtenPerEntry[i] = tuples;
         currentDecryptedOffset += decryptedSize;
+
+
+        uint64_t partitions[core::Configuration::LOCAL_PARTITIONING_COUNT] = {0};
+        uint64_t MASK = (hpcjoin::core::Configuration::LOCAL_PARTITIONING_COUNT - 1)
+                << (hpcjoin::core::Configuration::NETWORK_PARTITIONING_FANOUT + hpcjoin::core::Configuration::PAYLOAD_BITS);
+        for (uint64_t t = 0; t < tuples; ++t) {
+            uint64_t partitionId = HASH_BIT_MODULO(((CompressedTuple*) currentDecrpytedData)[t].value, MASK,
+                                                   hpcjoin::core::Configuration::NETWORK_PARTITIONING_FANOUT +
+                                                   hpcjoin::core::Configuration::PAYLOAD_BITS);
+            partitions[partitionId] += 1;
+        }
+
     }
 }
 
@@ -260,8 +278,8 @@ std::pair<uint64_t, uint64_t> Window::computeWindowSize(uint32_t nodeId) {
 void Window::assertAllTuplesWritten() {
 
 	for (uint32_t p = 0; p < hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT; ++p) {
-		JOIN_ASSERT(this->localHistogram[p] == this->writeCounters[p], "Window", "Not all tuples submitted to window. Partition %d. Local size %lu tuples. Write size %lu tuples.",
-				p, this->localHistogram[p], this->writeCounters[p]);
+		JOIN_ASSERT(this->sgxLocalHistogram[p] == this->writeCounters[p], "Window", "Not all tuples submitted to window. Partition %d. Local size %lu tuples. Write size %lu tuples.",
+				p, this->sgxLocalHistogram[p], this->writeCounters[p]);
 	}
 
 }

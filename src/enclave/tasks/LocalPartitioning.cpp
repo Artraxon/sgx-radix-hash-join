@@ -34,6 +34,10 @@ typedef union {
 namespace hpcjoin {
 namespace tasks {
 
+    std::map<uint64_t, uint64_t> LocalPartitioning::partitionHistogram;
+    std::map<uint64_t, uint64_t> LocalPartitioning::partitionSizes;
+    std::map<std::tuple<uint64_t, uint64_t>, uint64_t> LocalPartitioning::fromPartitionToLocalPartition;
+    uint64_t LocalPartitioning::counter;
 LocalPartitioning::LocalPartitioning(uint64_t innerPartitionSize, hpcjoin::data::CompressedTuple *innerPartition, uint64_t outerPartitionSize, hpcjoin::data::CompressedTuple *outerPartition) {
 
 	this->innerPartitionSize = innerPartitionSize;
@@ -114,6 +118,7 @@ ocall_startLocalPartitioningMemoryAllocation();
 
 	free(innerOffsets);
 	free(outerOffsets);
+    counter++;
 
 #ifdef MEASUREMENT_DETAILS_LOCALPART
 	ocall_stopLocalPartitioningTask();
@@ -178,6 +183,7 @@ uint64_t* LocalPartitioning::computePrefixSum(uint64_t* histogram) {
 void LocalPartitioning::partitionData(hpcjoin::data::CompressedTuple* input, uint64_t inputSize, hpcjoin::data::CompressedTuple* output, uint64_t* partitionOffsets, uint64_t* histogram) {
 
 	cacheline_t inCacheBuffer[hpcjoin::core::Configuration::LOCAL_PARTITIONING_COUNT] __attribute__((aligned(LOCAL_PARTITIONING_CACHELINE_SIZE)));
+    partitionSizes[inputSize] += 1;
 
 	for(uint64_t p=0; p<hpcjoin::core::Configuration::LOCAL_PARTITIONING_COUNT; ++p) {
 		inCacheBuffer[p].data.slot = partitionOffsets[p];
@@ -192,8 +198,11 @@ void LocalPartitioning::partitionData(hpcjoin::data::CompressedTuple* input, uin
 #endif
 
 	for (uint64_t t = 0; t < inputSize; ++t) {
-
 		uint64_t partitionId = HASH_BIT_MODULO(input[t].value, MASK, hpcjoin::core::Configuration::NETWORK_PARTITIONING_FANOUT + hpcjoin::core::Configuration::PAYLOAD_BITS);
+        partitionHistogram[partitionId] += 1;
+        if(partitionId == 1 || partitionId == 0){
+            fromPartitionToLocalPartition[std::tuple<uint64_t, uint64_t>(counter, partitionId)] += 1;
+        }
 		uint64_t slot = inCacheBuffer[partitionId].data.slot;
 		hpcjoin::data::CompressedTuple *cacheLine = (hpcjoin::data::CompressedTuple *) (inCacheBuffer + partitionId);
 		uint32_t slotMod = (slot) & (TUPLES_PER_CACHELINE - 1);

@@ -100,7 +100,8 @@ void Relation::randomOrder() {
 void Relation::distribute(uint32_t nodeId, uint32_t numberOfNodes) {
 
 	uint64_t incomingDataSize = (localSize - (numberOfNodes - 1) * (localSize / numberOfNodes));
-	hpcjoin::data::Tuple *incomingData = (hpcjoin::data::Tuple *) calloc(incomingDataSize, sizeof(hpcjoin::data::Tuple));
+	hpcjoin::data::Tuple *incomingData;
+    ocall_calloc_heap((void **)&incomingData, incomingDataSize * sizeof(hpcjoin::data::Tuple));
 
 	for (uint32_t i = 0; i < nodeId; ++i) {
 		// Receive from node i
@@ -109,9 +110,13 @@ void Relation::distribute(uint32_t nodeId, uint32_t numberOfNodes) {
 		uint32_t section = (nodeId + i) % numberOfNodes;
 		uint64_t sectionStart = section * (localSize / numberOfNodes);
 		uint64_t sectionSize = (section == numberOfNodes - 1) ? (localSize - (numberOfNodes - 1) * (localSize / numberOfNodes)) : (localSize / numberOfNodes);
+        hpcjoin::data::Tuple *outgoingData;
+        ocall_calloc_heap((void **)&outgoingData, sectionSize * sizeof(hpcjoin::data::Tuple));
 		JOIN_DEBUG("SWAP", "%d (%lu) <--> %d (%lu)\n", nodeId, section, i, section);
 		oc_MPI_recv(incomingData, sectionSize * sizeof(hpcjoin::data::Tuple), i, EXCHANGE_DATA_TAG);
-		oc_MPI_send(this->data + sectionStart, sectionSize * sizeof(hpcjoin::data::Tuple), i, EXCHANGE_DATA_TAG);
+        memcpy(outgoingData, this->data + sectionStart, sectionSize * sizeof(hpcjoin::data::Tuple));
+		oc_MPI_send(outgoingData, sectionSize * sizeof(hpcjoin::data::Tuple), i, EXCHANGE_DATA_TAG);
+        ocall_free(outgoingData);
 		//MPI_Recv(incomingData, sectionSize * sizeof(hpcjoin::data::Tuple), MPI_BYTE, i, EXCHANGE_DATA_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 		//MPI_Send(this->data + sectionStart, sectionSize * sizeof(hpcjoin::data::Tuple), MPI_BYTE, i, EXCHANGE_DATA_TAG, MPI_COMM_WORLD);
 		memcpy(data + sectionStart, incomingData, sectionSize * sizeof(hpcjoin::data::Tuple));
@@ -124,15 +129,19 @@ void Relation::distribute(uint32_t nodeId, uint32_t numberOfNodes) {
 		uint32_t section = (nodeId + i) % numberOfNodes;
 		uint64_t sectionStart = section * (localSize / numberOfNodes);
 		uint64_t sectionSize = (section == numberOfNodes - 1) ? (localSize - (numberOfNodes - 1) * (localSize / numberOfNodes)) : (localSize / numberOfNodes);
+        hpcjoin::data::Tuple *outgoingData;
+        ocall_calloc_heap((void **)&outgoingData, sectionSize * sizeof(hpcjoin::data::Tuple));
 		JOIN_DEBUG("SWAP", "%d (%lu) <--> %d (%lu)\n", nodeId, section, i, section);
-        oc_MPI_send(this->data + sectionStart, sectionSize * sizeof(hpcjoin::data::Tuple), i, EXCHANGE_DATA_TAG);
+        memcpy(outgoingData, this->data + sectionStart, sectionSize * sizeof(hpcjoin::data::Tuple));
+        oc_MPI_send(outgoingData, sectionSize * sizeof(hpcjoin::data::Tuple), i, EXCHANGE_DATA_TAG);
         oc_MPI_recv(incomingData, sectionSize * sizeof(hpcjoin::data::Tuple), i, EXCHANGE_DATA_TAG);
+        ocall_free(outgoingData);
 		//MPI_Send(this->data + sectionStart, sectionSize * sizeof(hpcjoin::data::Tuple), MPI_BYTE, i, EXCHANGE_DATA_TAG, MPI_COMM_WORLD);
 		//MPI_Recv(incomingData, sectionSize * sizeof(hpcjoin::data::Tuple), MPI_BYTE, i, EXCHANGE_DATA_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 		memcpy(data + sectionStart, incomingData, sectionSize * sizeof(hpcjoin::data::Tuple));
 	}
 
-	free(incomingData);
+	ocall_free(incomingData);
 	randomOrder();
 
 }

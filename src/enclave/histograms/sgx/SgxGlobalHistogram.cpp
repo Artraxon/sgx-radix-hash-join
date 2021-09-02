@@ -70,7 +70,7 @@ void SgxGlobalHistogram::computeGlobalHistogram() {
     recDisp[0] = 0;
     std::partial_sum(recCounts, recCounts + this->numberOfNodes - 1, recDisp + 1);
 
-    prepareSendBuffer(sendDisp, sendBuf, this->localHistogram->getLocalHistogram());
+    prepareSendBuffer(sendDisp, sendBuf);
     uint64_t outBuf[outputSize];
 
     ocall_MPI_AllToAllv(sendBuf,
@@ -82,8 +82,8 @@ void SgxGlobalHistogram::computeGlobalHistogram() {
 
     //Sorts the sealed Sizes so that they are grouped together by partition
     for (int i = 0; i < outputSize / MODE; ++i) {
-        uint64_t partition = i % (partitionsResponsible * MODE);
-        uint64_t node = i / (partitionsResponsible * MODE);
+        uint64_t partition = i % (partitionsResponsible);
+        uint64_t node = i / (partitionsResponsible);
         if(MODE == NOCACHING){
             this->sealedSizes[partition * numberOfNodes + node] = outBuf[i];
         } else {
@@ -102,22 +102,18 @@ void SgxGlobalHistogram::computeGlobalHistogram() {
 
 
 //Sort the Histogram after the nodes that the entries are sent to, so that AllToAll Sends them to the correct node
-void SgxGlobalHistogram::prepareSendBuffer(int* sendDisp, uint64_t * sendBuf, uint64_t* data){
+void SgxGlobalHistogram::prepareSendBuffer(int* sendDisp, uint64_t * sendBuf){
     uint32_t counts[this->numberOfNodes];
     std::fill(counts, counts + this->numberOfNodes, 0);
 
     for (uint64_t p = 0; p < hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT * MODE; ++p) {
         if(MODE == NOCACHING){
             uint32_t assigned = assignmentMap->getPartitionAssignment()[p];
-            sendBuf[sendDisp[assigned] + counts[assigned]++] = data[p];
+            sendBuf[sendDisp[assigned] + counts[assigned]++] = localHistogram->getLocalHistogram()[p];
         } else {
             uint32_t assigned = assignmentMap->getPartitionAssignment()[p/CACHING];
             uint64_t item;
-            if(p % 2 == 0){
-                item = data[p/CACHING] / core::Configuration::MEMORY_BUFFER_SIZE_BYTES;
-            } else {
-                item = data[p/CACHING] % core::Configuration::MEMORY_BUFFER_SIZE_BYTES;
-            }
+            item = localHistogram->getPackageHistogram()[p];
             sendBuf[sendDisp[assigned] + counts[assigned]++] = item;
         }
     }

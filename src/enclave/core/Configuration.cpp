@@ -20,8 +20,8 @@ namespace hpcjoin {
 
         void Configuration::setupConfig(arguments args){
             Configuration::CACHELINE_SIZE_BYTES = args.cacheline_tuples * sizeof(hpcjoin::data::CompressedTuple);
-            Configuration::CACHELINES_PER_MEMORY_BUFFER = args.package_cachelines;
             Configuration::MODE = (args.package_cachelines == 0 ? 1: 2);
+            Configuration::CACHELINES_PER_MEMORY_BUFFER = args.package_cachelines;
 
             //fprintf(1, "Set Mode to %li", MODE);
 

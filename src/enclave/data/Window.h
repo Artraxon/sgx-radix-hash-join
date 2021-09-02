@@ -90,12 +90,14 @@ protected:
 	uint64_t *globalHistogram;
 	uint64_t *baseOffsets;
 
-	uint64_t *writeOffsets;
-    uint64_t * sgxLocalHistogram;
+	uint64_t* writeOffsets;
+    uint64_t* sgxLocalHistogram;
     uint64_t* sgxGlobalHistogram;
     uint64_t* sgxBaseOffsets;
     uint64_t* sgxWriteOffsets;
     uint64_t* sealedSizes;
+
+    uint64_t entries;
 
     uint64_t *writeCounters;
 
