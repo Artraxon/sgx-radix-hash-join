@@ -30,9 +30,6 @@ public:
 	task_type_t getType();
 
 
-    static std::map<uint64_t, uint64_t> joinHistogram;
-    static std::queue<std::tuple<uint64_t, uint64_t>> partitionSizeQueue;
-    static std::map<std::tuple<uint64_t, uint64_t>, uint64_t> partitionSizes;
 protected:
 
 	uint64_t innerPartitionSize;

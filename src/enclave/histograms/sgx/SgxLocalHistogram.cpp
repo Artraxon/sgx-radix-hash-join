@@ -51,7 +51,9 @@ void SgxLocalHistogram::computeLocalHistogram() {
 #ifdef MEASUREMENT_DETAILS_HISTOGRAM
     //ocall_startHistogramLocalHistogramComputation();
 	//enclave::performance::Measurements::startHistogramSgxLocalHistogramComputation();
+    ocall_startSgxHistogramLocalSgxHistogramComputation();
 #endif
+    uint64_t totalSize = 0;
     if(MODE == CACHING){
         uint64_t packageSealedSize = communication::Encryption::getEncryptedSize(core::Configuration::MEMORY_BUFFER_SIZE_BYTES);
         printf("datasize: %ld", packageSealedSize);
@@ -61,12 +63,14 @@ void SgxLocalHistogram::computeLocalHistogram() {
             uint64_t packagedSize = packages * packageSealedSize;
             uint64_t restSize = communication::Encryption::getEncryptedSize(localHistogram[i] % tuplesPerPackage * sizeof(data::CompressedTuple));
             values[i] = packagedSize + restSize;
+            totalSize += values[i];
             packageValues[i * CACHING] = packages;
             packageValues[i * CACHING + 1] = restSize;
         }
     } else {
         for (uint32_t i = 0; i < hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT; ++i) {
             values[i] = communication::Encryption::getEncryptedSize(localHistogram[i] * sizeof(uint64_t));
+            totalSize += values[i];
         }
     }
 
@@ -75,6 +79,7 @@ void SgxLocalHistogram::computeLocalHistogram() {
 #ifdef MEASUREMENT_DETAILS_HISTOGRAM
 	//ocall_stopHistogramLocalHistogramComputation(this->localSize);
 	//enclave::performance::Measurements::stopHistogramSgxLocalHistogramComputation(numberOfElements);
+    ocall_stopSgxHistogramLocalSgxHistogramComputation(totalSize);
 #endif
 
 }

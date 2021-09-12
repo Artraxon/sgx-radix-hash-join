@@ -36,6 +36,8 @@ struct timeval hpcjoin::performance::Measurements::waitingForNetworkCompletionSt
 struct timeval hpcjoin::performance::Measurements::waitingForNetworkCompletionStop;
 struct timeval hpcjoin::performance::Measurements::localProcessingPreparationsStart;
 struct timeval hpcjoin::performance::Measurements::localProcessingPreparationsStop;
+struct timeval hpcjoin::performance::Measurements::unsealingStart;
+struct timeval hpcjoin::performance::Measurements::unsealingStop;
 
 struct timeval hpcjoin::performance::Measurements::histogramLocalHistogramComputationStart;
 struct timeval hpcjoin::performance::Measurements::histogramLocalHistogramComputationStop;
@@ -45,6 +47,14 @@ struct timeval hpcjoin::performance::Measurements::histogramAssignmentStart;
 struct timeval hpcjoin::performance::Measurements::histogramAssignmentStop;
 struct timeval hpcjoin::performance::Measurements::histogramOffsetComputationStart;
 struct timeval hpcjoin::performance::Measurements::histogramOffsetComputationStop;
+
+
+struct timeval hpcjoin::performance::Measurements::histogramLocalSgxHistogramComputationStart;
+struct timeval hpcjoin::performance::Measurements::histogramLocalSgxHistogramComputationStop;
+struct timeval hpcjoin::performance::Measurements::histogramGlobalSgxHistogramComputationStart;
+struct timeval hpcjoin::performance::Measurements::histogramGlobalSgxHistogramComputationStop;
+struct timeval hpcjoin::performance::Measurements::histogramSgxOffsetComputationStart;
+struct timeval hpcjoin::performance::Measurements::histogramSgxOffsetComputationStop;
 
 struct timeval hpcjoin::performance::Measurements::networkPartitioningMemoryAllocationStart;
 struct timeval hpcjoin::performance::Measurements::networkPartitioningMemoryAllocationStop;
@@ -56,6 +66,8 @@ struct timeval hpcjoin::performance::Measurements::networkPartitioningWindowPutS
 struct timeval hpcjoin::performance::Measurements::networkPartitioningWindowPutStop;
 struct timeval hpcjoin::performance::Measurements::networkPartitioningWindowWaitStart;
 struct timeval hpcjoin::performance::Measurements::networkPartitioningWindowWaitStop;
+struct timeval hpcjoin::performance::Measurements::networkPartitioningWindowSealStart;
+struct timeval hpcjoin::performance::Measurements::networkPartitioningWindowSealStop;
 
 struct timeval hpcjoin::performance::Measurements::localPartitioningTaskStart;
 struct timeval hpcjoin::performance::Measurements::localPartitioningTaskStop;
@@ -151,7 +163,7 @@ void Measurements::storePhaseData() {
 
 /************************************************************/
 
-uint64_t Measurements::specialTimes[3];
+uint64_t Measurements::specialTimes[4];
 
 void Measurements::startWindowAllocation() {
 	gettimeofday(&windowAllocationStart, NULL);
@@ -180,10 +192,19 @@ void Measurements::stopLocalProcessingPreparations() {
 	specialTimes[2] = timeDiff(localProcessingPreparationsStop, localProcessingPreparationsStart);
 }
 
+void Measurements::startUnsealing(){
+    gettimeofday(&unsealingStart, NULL);
+}
+void Measurements::stopUnsealing(){
+    gettimeofday(&unsealingStop, NULL);
+    specialTimes[3] = timeDiff(unsealingStop, unsealingStart);
+}
+
 void Measurements::storeSpecialData() {
 	fprintf(performanceOutputFile, "SWINALLOC\t%lu\tus\n", specialTimes[0]);
 	fprintf(performanceOutputFile, "SNETCOMPL\t%lu\tus\n", specialTimes[1]);
 	fprintf(performanceOutputFile, "SLOCPREP\t%lu\tus\n", specialTimes[2]);
+    fprintf(performanceOutputFile, "SUNSEAL\t%lu\tus\n", specialTimes[3]);
 }
 
 /************************************************************/
@@ -267,6 +288,74 @@ void Measurements::storeHistogramComputationData() {
 
 /************************************************************/
 
+    uint64_t Measurements::histogramLocalSgxHistogramComputationIdx = 0;
+    uint64_t Measurements::histogramLocalSgxHistogramComputationTimes[2];
+    uint64_t Measurements::histogramLocalSgxHistogramComputationElements[2];
+
+    uint64_t Measurements::histogramGlobalSgxHistogramComputationIdx = 0;
+    uint64_t Measurements::histogramGlobalSgxHistogramComputationTimes[2];
+
+    uint64_t Measurements::histogramSgxOffsetComputationIdx = 0;
+    uint64_t Measurements::histogramSgxOffsetComputationTimes[2];
+
+    void Measurements::startSgxHistogramLocalSgxHistogramComputation() {
+        gettimeofday(&histogramLocalSgxHistogramComputationStart, NULL);
+    }
+
+    void Measurements::stopSgxHistogramLocalSgxHistogramComputation(uint64_t numberOfElemenets) {
+        gettimeofday(&histogramLocalSgxHistogramComputationStop, NULL);
+        uint64_t time = timeDiff(histogramLocalSgxHistogramComputationStop, histogramLocalSgxHistogramComputationStart);
+
+        JOIN_ASSERT(histogramLocalSgxHistogramComputationIdx < 2, "Performance", "Index out of bounds");
+        histogramLocalSgxHistogramComputationTimes[histogramLocalSgxHistogramComputationIdx] = time;
+        histogramLocalSgxHistogramComputationElements[histogramLocalSgxHistogramComputationIdx] = numberOfElemenets;
+        ++histogramLocalSgxHistogramComputationIdx;
+    }
+
+    void Measurements::startSgxHistogramGlobalSgxHistogramComputation() {
+        gettimeofday(&histogramGlobalSgxHistogramComputationStart, NULL);
+    }
+
+    void Measurements::stopSgxHistogramGlobalSgxHistogramComputation() {
+        gettimeofday(&histogramGlobalSgxHistogramComputationStop, NULL);
+        uint64_t time = timeDiff(histogramGlobalSgxHistogramComputationStop, histogramGlobalSgxHistogramComputationStart);
+
+        JOIN_ASSERT(histogramGlobalSgxHistogramComputationIdx < 2, "Performance", "Index out of bounds");
+        histogramGlobalSgxHistogramComputationTimes[histogramGlobalSgxHistogramComputationIdx] = time;
+        ++histogramGlobalSgxHistogramComputationIdx;
+    }
+
+    void Measurements::startSgxHistogramOffsetComputation() {
+        gettimeofday(&histogramSgxOffsetComputationStart, NULL);
+    }
+
+    void Measurements::stopSgxHistogramOffsetComputation() {
+        gettimeofday(&histogramSgxOffsetComputationStop, NULL);
+        uint64_t time = timeDiff(histogramSgxOffsetComputationStop, histogramSgxOffsetComputationStart);
+
+        JOIN_ASSERT(histogramSgxOffsetComputationIdx < 2, "Performance", "Index out of bounds");
+        histogramSgxOffsetComputationTimes[histogramSgxOffsetComputationIdx] = time;
+        ++histogramSgxOffsetComputationIdx;
+    }
+
+    void Measurements::storeSgxHistogramComputationData() {
+        fprintf(performanceOutputFile, "HSGXILOCAL\t%lu\tus\n", histogramLocalSgxHistogramComputationTimes[0]);
+        fprintf(performanceOutputFile, "HSGXOLOCELEM\t%lu\ttuples\n", histogramLocalSgxHistogramComputationElements[0]);
+        fprintf(performanceOutputFile, "HSGXILOCRATE\t%.2f\tMbytes/sec\n",
+                ((double) histogramLocalSgxHistogramComputationElements[0]) / histogramLocalSgxHistogramComputationTimes[0]);
+        fprintf(performanceOutputFile, "HSGXOLOCAL\t%lu\tus\n", histogramLocalSgxHistogramComputationTimes[1]);
+        fprintf(performanceOutputFile, "HSGXOLOCELEM\t%lu\ttuples\n", histogramLocalSgxHistogramComputationElements[1]);
+        fprintf(performanceOutputFile, "HSGXOLOCRATE\t%.2f\tMbytes/sec\n",
+                ((double) histogramLocalSgxHistogramComputationElements[1]) / histogramLocalSgxHistogramComputationTimes[1]);
+        fprintf(performanceOutputFile, "HSGXIGLOBAL\t%lu\tus\n", histogramGlobalSgxHistogramComputationTimes[0]);
+        fprintf(performanceOutputFile, "HSGXOGLOBAL\t%lu\tus\n", histogramGlobalSgxHistogramComputationTimes[1]);
+        fprintf(performanceOutputFile, "HSGXIOFFCOMP\t%lu\tus\n", histogramSgxOffsetComputationTimes[0]);
+        fprintf(performanceOutputFile, "HSGXOOFFCOMP\t%lu\tus\n", histogramSgxOffsetComputationTimes[1]);
+    }
+
+/************************************************************/
+
+
 uint64_t Measurements::networkPartitioningMemoryAllocationIdx = 0;
 uint64_t Measurements::networkPartitioningMemoryAllocationTimes[2];
 
@@ -281,6 +370,9 @@ uint64_t Measurements::networkPartitioningWindowPutTimeSum = 0;
 
 uint64_t Measurements::networkPartitioningWindowWaitCount = 0;
 uint64_t Measurements::networkPartitioningWindowWaitTimeSum = 0;
+
+uint64_t Measurements::networkPartitioningWindowSealCount = 0;
+uint64_t Measurements::networkPartitioningWindowSealTime = 0;
 
 void Measurements::startNetworkPartitioningMemoryAllocation() {
 	gettimeofday(&networkPartitioningMemoryAllocationStart, NULL);
@@ -343,6 +435,16 @@ void Measurements::stopNetworkPartitioningWindowWait() {
 	++networkPartitioningWindowWaitCount;
 }
 
+void Measurements::startNetworkPartitioningSealing(){
+    gettimeofday(&networkPartitioningWindowSealStart, NULL);
+}
+void Measurements::stopNetworkPartitioningSealing(){
+    gettimeofday(&networkPartitioningWindowSealStop, NULL);
+    uint64_t time = timeDiff(networkPartitioningWindowSealStop, networkPartitioningWindowSealStart);
+    networkPartitioningWindowSealTime += time;
+    ++networkPartitioningWindowSealCount;
+}
+
 void Measurements::storeNetworkPartitioningData() {
 	fprintf(performanceOutputFile, "MIMEMALLOC\t%lu\tus\n", networkPartitioningMemoryAllocationTimes[0]);
 	fprintf(performanceOutputFile, "MIMAINPART\t%lu\tus\n", networkPartitioningMainPartitioningTimes[0]);
@@ -354,6 +456,8 @@ void Measurements::storeNetworkPartitioningData() {
 	fprintf(performanceOutputFile, "MWINPUTCNT\t%lu\tcalls\n", networkPartitioningWindowPutCount);
 	fprintf(performanceOutputFile, "MWINWAIT\t%lu\tus\n", networkPartitioningWindowWaitTimeSum);
 	fprintf(performanceOutputFile, "MWINWAITCNT\t%lu\tcalls\n", networkPartitioningWindowWaitCount);
+    fprintf(performanceOutputFile, "MWSEAL\t%lu\tus\n", networkPartitioningWindowSealTime);
+    fprintf(performanceOutputFile, "MWSEALCNT\t%lu\tcalls\n", networkPartitioningWindowSealCount);
 }
 
 /************************************************************/
@@ -733,6 +837,7 @@ void Measurements::storeAllMeasurements() {
 	storePhaseData();
 	storeSpecialData();
 	storeHistogramComputationData();
+    storeSgxHistogramComputationData();
 	storeNetworkPartitioningData();
 	storeLocalPartitioningData();
 	storeBuildProbeData();

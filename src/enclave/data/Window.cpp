@@ -141,15 +141,24 @@ void Window::write(uint32_t partitionId, CompressedTuple* tuples, uint64_t sizeI
 
 	//JOIN_DEBUG("Window", "Initializing write for partition %d of %lu tuples", partitionId, sizeInTuples);
 
+#ifdef MEASUREMENT_DETAILS_NETWORK
+    ocall_startNetworkPartitioningSealing();
+#endif
 
 	writtenTuples += sizeInTuples;
+    uint32_t targetProcess = this->assignment[partitionId];
+    uint64_t targetOffset = this->sgxWriteOffsets[partitionId] + this->writeCounters[partitionId];
+    uint32_t encryptedSize = communication::Encryption::getEncryptedSize(sizeInTuples * sizeof(CompressedTuple));
+    writtenEncryptedData += encryptedSize;
+    auto *buffer = static_cast<uint8_t *>(malloc(encryptedSize));
+    communication::encryption->encrypt(reinterpret_cast<uint8_t *>(tuples), sizeInTuples * sizeof(CompressedTuple), buffer);
+
 #ifdef MEASUREMENT_DETAILS_NETWORK
+    ocall_stopNetworkPartitioningSealing();
     ocall_startNetworkPartitioningWindowPut();
 	//enclave::performance::Measurements::startNetworkPartitioningWindowPut();
 #endif
 
-	uint32_t targetProcess = this->assignment[partitionId];
-	uint64_t targetOffset = this->sgxWriteOffsets[partitionId] + this->writeCounters[partitionId];
 
 	//JOIN_DEBUG("Window", "Target %d and offset %lu (%lu + %lu)", targetProcess, targetOffset, this->writeOffsets[partitionId], this->writeCounters[partitionId]);
 
@@ -159,10 +168,6 @@ void Window::write(uint32_t partitionId, CompressedTuple* tuples, uint64_t sizeI
 	JOIN_ASSERT(targetOffset <= remoteSize, "Window", "Target offset is outside window range");
 	JOIN_ASSERT(targetOffset + sizeInTuples <= remoteSize, "Window", "Target offset and size is outside window range");
 
-	uint32_t encryptedSize = communication::Encryption::getEncryptedSize(sizeInTuples * sizeof(CompressedTuple));
-	writtenEncryptedData += encryptedSize;
-	auto *buffer = static_cast<uint8_t *>(malloc(encryptedSize));
-    communication::encryption->encrypt(reinterpret_cast<uint8_t *>(tuples), sizeInTuples * sizeof(CompressedTuple), buffer);
     void *untrustedBuffer;
     ocall_calloc_heap(&untrustedBuffer, encryptedSize);
     memcpy(untrustedBuffer, buffer, encryptedSize);
@@ -224,18 +229,6 @@ void Window::unsealData() {
         receivedTuples += tuples;
         writtenPerEntry[i] = tuples;
         currentDecryptedOffset += decryptedSize;
-
-
-        uint64_t partitions[core::Configuration::LOCAL_PARTITIONING_COUNT] = {0};
-        uint64_t MASK = (hpcjoin::core::Configuration::LOCAL_PARTITIONING_COUNT - 1)
-                << (hpcjoin::core::Configuration::NETWORK_PARTITIONING_FANOUT + hpcjoin::core::Configuration::PAYLOAD_BITS);
-        for (uint64_t t = 0; t < tuples; ++t) {
-            uint64_t partitionId = HASH_BIT_MODULO(((CompressedTuple*) currentDecrpytedData)[t].value, MASK,
-                                                   hpcjoin::core::Configuration::NETWORK_PARTITIONING_FANOUT +
-                                                   hpcjoin::core::Configuration::PAYLOAD_BITS);
-            partitions[partitionId] += 1;
-        }
-
     }
 }
 

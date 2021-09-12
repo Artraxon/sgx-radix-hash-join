@@ -45,7 +45,7 @@ int initialize_enclave(void)
 int SGX_CDECL main(int argc, char *argv[])
 {
     volatile int i = 0;
-    while (i == 1){
+    while (i == 0){
         sleep(2);
     }
     arguments args = parseArgs(argc, argv);

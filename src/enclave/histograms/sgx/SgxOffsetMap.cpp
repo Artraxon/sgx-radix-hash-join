@@ -38,6 +38,7 @@ void SgxOffsetMap::computeOffsets() {
 #ifdef MEASUREMENT_DETAILS_HISTOGRAM
     //ocall_startHistogramOffsetComputation();
 	//enclave::performance::Measurements::startHistogramOffsetComputation();
+    ocall_startSgxHistogramOffsetComputation();
 #endif
 
 	computeBaseOffsets();
@@ -47,6 +48,7 @@ void SgxOffsetMap::computeOffsets() {
 #ifdef MEASUREMENT_DETAILS_HISTOGRAM
 	//ocall_stopHistogramOffsetComputation();
 	//enclave::performance::Measurements::stopHistogramOffsetComputation();
+    ocall_stopSgxHistogramOffsetComputation();
 #endif
 
 }

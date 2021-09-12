@@ -40,6 +40,7 @@ void SgxGlobalHistogram::computeGlobalHistogram() {
 #ifdef MEASUREMENT_DETAILS_HISTOGRAM
     //ocall_startHistogramGlobalHistogramComputation();
 	//enclave::performance::Measurements::startHistogramSgxGlobalHistogramComputation();
+    ocall_startSgxHistogramGlobalSgxHistogramComputation();
 #endif
     ocall_MPI_allreduce_sum(this->localHistogram->getLocalHistogram(), this->values, hpcjoin::core::Configuration::NETWORK_PARTITIONING_COUNT);
 
@@ -96,6 +97,7 @@ void SgxGlobalHistogram::computeGlobalHistogram() {
 #ifdef MEASUREMENT_DETAILS_HISTOGRAM
 	//ocall_stopHistogramGlobalHistogramComputation();
 	//enclave::performance::Measurements::stopHistogramSgxGlobalHistogramComputation();
+    ocall_stopSgxHistogramGlobalSgxHistogramComputation();
 #endif
 
 }

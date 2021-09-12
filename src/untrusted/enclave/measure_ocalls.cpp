@@ -59,6 +59,13 @@ void ocall_startLocalProcessingPreparations(){
 void ocall_stopLocalProcessingPreparations(){
     hpcjoin::performance::Measurements::stopLocalProcessingPreparations();
 }
+
+void ocall_startUnsealing(){
+    hpcjoin::performance::Measurements::startUnsealing();
+}
+void ocall_stopUnsealing(){
+    hpcjoin::performance::Measurements::stopUnsealing();
+}
 void ocall_storeSpecialData(){
     hpcjoin::performance::Measurements::storeSpecialData();
 }
@@ -94,6 +101,30 @@ void ocall_storeHistogramComputationData(){
     hpcjoin::performance::Measurements::storeHistogramComputationData();
 }
 
+void ocall_startSgxHistogramLocalSgxHistogramComputation(){
+    hpcjoin::performance::Measurements::startSgxHistogramLocalSgxHistogramComputation();
+}
+void ocall_stopSgxHistogramLocalSgxHistogramComputation(uint64_t numberOfElemenets){
+    hpcjoin::performance::Measurements::stopSgxHistogramLocalSgxHistogramComputation(numberOfElemenets);
+}
+void ocall_startSgxHistogramGlobalSgxHistogramComputation(){
+    hpcjoin::performance::Measurements::startSgxHistogramGlobalSgxHistogramComputation();
+}
+void ocall_stopSgxHistogramGlobalSgxHistogramComputation(){
+    hpcjoin::performance::Measurements::stopSgxHistogramGlobalSgxHistogramComputation();
+}
+void ocall_startSgxHistogramOffsetComputation(){
+    hpcjoin::performance::Measurements::startSgxHistogramOffsetComputation();
+}
+void ocall_stopSgxHistogramOffsetComputation(){
+    hpcjoin::performance::Measurements::stopSgxHistogramOffsetComputation();
+}
+void ocall_storeSgxHistogramComputationData(){
+    hpcjoin::performance::Measurements::storeSgxHistogramComputationData();
+}
+
+
+
 void ocall_startNetworkPartitioningMemoryAllocation(){
     hpcjoin::performance::Measurements::startNetworkPartitioningMemoryAllocation();
 }
@@ -124,6 +155,13 @@ void ocall_startNetworkPartitioningWindowWait(){
 void ocall_stopNetworkPartitioningWindowWait(){
     hpcjoin::performance::Measurements::stopNetworkPartitioningWindowWait();
 }
+void ocall_startNetworkPartitioningSealing(){
+    hpcjoin::performance::Measurements::startNetworkPartitioningSealing();
+}
+void ocall_stopNetworkPartitioningSealing(){
+    hpcjoin::performance::Measurements::stopNetworkPartitioningSealing();
+}
+
 void ocall_storeNetworkPartitioningData(){
     hpcjoin::performance::Measurements::storeNetworkPartitioningData();
 }

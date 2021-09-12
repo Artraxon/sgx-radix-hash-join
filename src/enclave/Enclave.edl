@@ -111,6 +111,8 @@ untrusted {
 	void ocall_stopWaitingForNetworkCompletion();
 	void ocall_startLocalProcessingPreparations();
 	void ocall_stopLocalProcessingPreparations();
+	void ocall_startUnsealing();
+	void ocall_stopUnsealing();
 	void ocall_storeSpecialData();
 
 	/**
@@ -127,6 +129,14 @@ untrusted {
 	void ocall_stopHistogramOffsetComputation();
 	void ocall_storeHistogramComputationData();
 
+	void ocall_startSgxHistogramLocalSgxHistogramComputation();
+	void ocall_stopSgxHistogramLocalSgxHistogramComputation(uint64_t numberOfElemenets);
+	void ocall_startSgxHistogramGlobalSgxHistogramComputation();
+	void ocall_stopSgxHistogramGlobalSgxHistogramComputation();
+	void ocall_startSgxHistogramOffsetComputation();
+	void ocall_stopSgxHistogramOffsetComputation();
+	void ocall_storeSgxHistogramComputationData();
+
 	void ocall_startNetworkPartitioningMemoryAllocation();
 	void ocall_stopNetworkPartitioningMemoryAllocation(uint64_t bufferSize);
 	void ocall_startNetworkPartitioningMainPartitioning();
@@ -137,6 +147,8 @@ untrusted {
 	void ocall_stopNetworkPartitioningWindowPut();
 	void ocall_startNetworkPartitioningWindowWait();
 	void ocall_stopNetworkPartitioningWindowWait();
+    void ocall_startNetworkPartitioningSealing();
+    void ocall_stopNetworkPartitioningSealing();
 	void ocall_storeNetworkPartitioningData();
 
 

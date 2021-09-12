@@ -65,6 +65,8 @@ public:
 	static void stopWaitingForNetworkCompletion();
 	static void startLocalProcessingPreparations();
 	static void stopLocalProcessingPreparations();
+    static void startUnsealing();
+    static void stopUnsealing();
 	static void storeSpecialData();
 
 protected:
@@ -75,8 +77,10 @@ protected:
 	static struct timeval waitingForNetworkCompletionStop;
 	static struct timeval localProcessingPreparationsStart;
 	static struct timeval localProcessingPreparationsStop;
+    static struct timeval unsealingStart;
+    static struct timeval unsealingStop;
 
-	static uint64_t specialTimes[3];
+	static uint64_t specialTimes[4];
 
 	/**
 	 * Specific counters for histogram computation
@@ -119,6 +123,34 @@ protected:
 	static uint64_t histogramOffsetComputationTimes[2];
 
 
+public:
+
+//SGX Histograms
+    static void startSgxHistogramLocalSgxHistogramComputation();
+    static void stopSgxHistogramLocalSgxHistogramComputation(uint64_t numberOfElemenets);
+    static void startSgxHistogramGlobalSgxHistogramComputation();
+    static void stopSgxHistogramGlobalSgxHistogramComputation();
+    static void startSgxHistogramOffsetComputation();
+    static void stopSgxHistogramOffsetComputation();
+    static void storeSgxHistogramComputationData();
+
+protected:
+
+    static struct timeval histogramLocalSgxHistogramComputationStart;
+    static struct timeval histogramLocalSgxHistogramComputationStop;
+    static struct timeval histogramGlobalSgxHistogramComputationStart;
+    static struct timeval histogramGlobalSgxHistogramComputationStop;
+    static struct timeval histogramSgxOffsetComputationStart;
+    static struct timeval histogramSgxOffsetComputationStop;
+
+    static uint64_t histogramLocalSgxHistogramComputationIdx;
+    static uint64_t histogramLocalSgxHistogramComputationTimes[2];
+    static uint64_t histogramLocalSgxHistogramComputationElements[2];
+    static uint64_t histogramGlobalSgxHistogramComputationIdx;
+    static uint64_t histogramGlobalSgxHistogramComputationTimes[2];
+    static uint64_t histogramSgxOffsetComputationIdx;
+    static uint64_t histogramSgxOffsetComputationTimes[2];
+
 
 public:
 
@@ -132,6 +164,8 @@ public:
 	static void stopNetworkPartitioningWindowPut();
 	static void startNetworkPartitioningWindowWait();
 	static void stopNetworkPartitioningWindowWait();
+    static void startNetworkPartitioningSealing();
+    static void stopNetworkPartitioningSealing();
 	static void storeNetworkPartitioningData();
 
 protected:
@@ -146,6 +180,8 @@ protected:
 	static struct timeval networkPartitioningWindowPutStop;
 	static struct timeval networkPartitioningWindowWaitStart;
 	static struct timeval networkPartitioningWindowWaitStop;
+    static struct timeval networkPartitioningWindowSealStart;
+    static struct timeval networkPartitioningWindowSealStop;
 
 	static uint64_t networkPartitioningMemoryAllocationIdx;
 	static uint64_t networkPartitioningMemoryAllocationTimes[2];
@@ -157,6 +193,8 @@ protected:
 	static uint64_t networkPartitioningWindowPutTimeSum;
 	static uint64_t networkPartitioningWindowWaitCount;
 	static uint64_t networkPartitioningWindowWaitTimeSum;
+    static uint64_t networkPartitioningWindowSealCount;
+    static uint64_t networkPartitioningWindowSealTime;
 
 	/**
 	 * Specific counters for local partitioning

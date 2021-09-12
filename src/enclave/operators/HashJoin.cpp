@@ -145,9 +145,12 @@ void HashJoin::join() {
 	 * Unseal Data
 	 */
 
-	 innerWindow->unsealData();
-	 outerWindow->unsealData();
+    ocall_startUnsealing();
 
+    innerWindow->unsealData();
+    outerWindow->unsealData();
+
+    ocall_stopUnsealing();
 	/**
 	 * Prepare transition
 	 */
@@ -167,9 +170,6 @@ void HashJoin::join() {
 			hpcjoin::data::CompressedTuple *outerRelationPartition = outerWindow->getPartition(p);
 			uint64_t outerRelationPartitionSize = outerWindow->getPartitionSize(p);
 
-            countRadix(innerRelationPartition, innerRelationPartitionSize);
-            countRadix(outerRelationPartition, outerRelationPartitionSize);
-
 			if (hpcjoin::core::Configuration::ENABLE_TWO_LEVEL_PARTITIONING) {
 				TASK_QUEUE.push(new hpcjoin::tasks::LocalPartitioning(innerRelationPartitionSize, innerRelationPartition, outerRelationPartitionSize, outerRelationPartition));
 			} else {
@@ -178,13 +178,6 @@ void HashJoin::join() {
 		}
 	}
 
-    uint64_t joinHistogram[partitionHistogram.size()];
-    uint64_t i = 0;
-    for (std::map<uint64_t, uint64_t>::iterator it = partitionHistogram.begin(); it != partitionHistogram.end(); it++) {
-        uint64_t first = it->first;
-        uint64_t second = it->second;
-        joinHistogram[i++] = it->second;
-    }
 	// Delete the network related computation
 	delete histogramComputation;
 

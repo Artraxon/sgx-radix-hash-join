@@ -143,13 +143,15 @@ Enclave_Include_Paths := -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc \
 						 -I src/enclave -I src/shared \
 						 -I /usr/lib/gcc/x86_64-linux-gnu/9/include
 
-# $(addprefix -I,$(INCLUDE_ENCLAVE)) \
+# $(addprefix -I,$(INCLUDE_ENCLAVE))
 
+#CACHELINE_SIZE = 64
 Enclave_C_Flags := $(Enclave_Include_Paths) $(CFLAGS) -nostdinc -fvisibility=hidden -fpie -ffunction-sections \
 				   -fdata-sections $(MITIGATION_CFLAGS) -fopenmp -Wno-missing-field-initializers \
 				   -mavx \
 			   	   -D MEASUREMENT_DETAILS_HISTOGRAM -D MEASUREMENT_DETAILS_NETWORK \
-			       -D MEASUREMENT_DETAILS_LOCALPART -D MEASUREMENT_DETAILS_LOCALBP
+			       -D MEASUREMENT_DETAILS_LOCALPART -D MEASUREMENT_DETAILS_LOCALBP \
+			       -D'LOCAL_PARTITIONING_CACHELINE_SIZE=($(CACHELINE_SIZE))' -'DNETWORK_PARTITIONING_CACHELINE_SIZE=($(CACHELINE_SIZE))'
 
 CC_BELOW_4_9 := $(shell expr "`$(CC) -dumpversion`" \< "4.9")
 ifeq ($(CC_BELOW_4_9), 1)

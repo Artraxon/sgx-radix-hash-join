@@ -19,7 +19,12 @@
 #include <histograms/OffsetMap.h>
 #include <histograms/sgx/SgxOffsetMap.h>
 
+/*
+#ifndef NETWORK_PARTITIONING_CACHELINE_SIZE
 #define NETWORK_PARTITIONING_CACHELINE_SIZE (64)
+#endif
+*/
+
 #define TUPLES_PER_CACHELINE (NETWORK_PARTITIONING_CACHELINE_SIZE / sizeof(hpcjoin::data::CompressedTuple))
 
 #define HASH_BIT_MODULO(KEY, MASK, NBITS) (((KEY) & (MASK)) >> (NBITS))
