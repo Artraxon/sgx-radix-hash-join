@@ -151,7 +151,7 @@ Enclave_C_Flags := $(Enclave_Include_Paths) $(CFLAGS) -nostdinc -fvisibility=hid
 				   -mavx \
 			   	   -D MEASUREMENT_DETAILS_HISTOGRAM -D MEASUREMENT_DETAILS_NETWORK \
 			       -D MEASUREMENT_DETAILS_LOCALPART -D MEASUREMENT_DETAILS_LOCALBP \
-			       -D'LOCAL_PARTITIONING_CACHELINE_SIZE=($(CACHELINE_SIZE))' -'DNETWORK_PARTITIONING_CACHELINE_SIZE=($(CACHELINE_SIZE))'
+			       -D'LOCAL_PARTITIONING_CACHELINE_SIZE=($(CACHELINE_SIZE))' -D'NETWORK_PARTITIONING_CACHELINE_SIZE=($(CACHELINE_SIZE))'
 
 CC_BELOW_4_9 := $(shell expr "`$(CC) -dumpversion`" \< "4.9")
 ifeq ($(CC_BELOW_4_9), 1)
@@ -325,7 +325,7 @@ build/enclave/%.o: src/enclave/%.cpp generated/trusted/Enclave_t.h
 
 $(Enclave_Name): generated/trusted/Enclave_t.o $(Enclave_Cpp_Objects)
 	mkdir -p $(RELEASE_FOLDER)
-	@$(CXX) $^ -o $(RELEASE_FOLDER)/$@ $(Enclave_Link_Flags)
+	$(CXX) $^ -o $(RELEASE_FOLDER)/$@ $(Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 
 $(Signed_Enclave_Name): $(Enclave_Name)

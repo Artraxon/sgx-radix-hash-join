@@ -24,17 +24,19 @@ public:
 	static const uint32_t MEMORY_BUFFERS_PER_PARTITION = 2;
 
 	static uint16_t MODE;
+    static uint64_t ZIPF_SIZE;
+    static double  ZIPF_FACTOR;
 
 	static uint64_t MEMORY_BUFFER_SIZE_BYTES;
 	static uint64_t MEMORY_PARTITION_SIZE_BYTES;
 
 	static const bool ENABLE_TWO_LEVEL_PARTITIONING = true;
 
-	static const uint64_t NETWORK_PARTITIONING_FANOUT = 5;
-	static const uint64_t LOCAL_PARTITIONING_FANOUT = 10;
+	static uint64_t NETWORK_PARTITIONING_FANOUT;
+	static uint64_t LOCAL_PARTITIONING_FANOUT;
 
-	static const uint64_t NETWORK_PARTITIONING_COUNT = (1 << NETWORK_PARTITIONING_FANOUT);
-	static const uint64_t LOCAL_PARTITIONING_COUNT = (1 << LOCAL_PARTITIONING_FANOUT);
+	static uint64_t NETWORK_PARTITIONING_COUNT;
+	static uint64_t LOCAL_PARTITIONING_COUNT;
 
 	static constexpr double ALLOCATION_FACTOR = 1.1;
 

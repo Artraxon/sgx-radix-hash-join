@@ -1,10 +1,17 @@
 <EnclaveConfiguration>
   <ProdID>0</ProdID>
   <ISVSVN>0</ISVSVN>
-  <StackMaxSize>0x20000</StackMaxSize>
+  <!--<StackMaxSize>0x20000</StackMaxSize>-->
 <!--   600 MB-->
+<!--<StackMaxSize>0x80000000</StackMaxSize>
+   4.5 GB
+   <HeapMaxSize>0x100000000</HeapMaxSize>
   <HeapMaxSize>0x25800000</HeapMaxSize>
-  <!--   2 GB-->
+     2 GB-->
+  <StackMaxSize>0x20000</StackMaxSize>
+  <!--   600 MB-->
+  <HeapMaxSize>0x180000000</HeapMaxSize>
+  <!-- 7 GB-->
   <TCSNum>9</TCSNum>
   <TCSMinPool>9</TCSMinPool>
   <TCSPolicy>1</TCSPolicy>

@@ -4,6 +4,10 @@
  *
  */
 
+extern "C" {
+#include <data/genzipf.h>
+}
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -103,8 +107,14 @@ void ecall_start_hash_join(arguments* passed_args){
 	JOIN_MEM_DEBUG("Relations created");
 
 	ocall_srand(1234+nodeId);
-	innerRelation->fillUniqueValues(nodeId * (globalInnerRelationSize / numberOfNodes), nodeId * (globalInnerRelationSize / numberOfNodes));
-	outerRelation->fillUniqueValues((numberOfNodes - nodeId - 1) * (globalOuterRelationSize / numberOfNodes), nodeId * (globalOuterRelationSize / numberOfNodes));
+    if(hpcjoin::core::Configuration::ZIPF_SIZE > 0){
+        innerRelation->fillModuloValues(0, nodeId * (globalInnerRelationSize), hpcjoin::core::Configuration::ZIPF_SIZE);
+        hpcjoin::data::Tuple* outerData = outerRelation->getData();
+        gen_zipf(localOuterRelationSize, hpcjoin::core::Configuration::ZIPF_SIZE, hpcjoin::core::Configuration::ZIPF_FACTOR, reinterpret_cast<item_t **>(&outerData));
+    } else {
+        innerRelation->fillUniqueValues(nodeId * (globalInnerRelationSize / numberOfNodes), nodeId * (globalInnerRelationSize / numberOfNodes));
+        outerRelation->fillUniqueValues((numberOfNodes - nodeId - 1) * (globalOuterRelationSize / numberOfNodes), nodeId * (globalOuterRelationSize / numberOfNodes));
+    }
 	//outerRelation->fillModuloValues((numberOfNodes - nodeId - 1) * (globalInnerRelationSize / numberOfNodes), nodeId * (globalOuterRelationSize / numberOfNodes), innerRelation->getLocalSize());
 
 	if (numberOfNodes > 1) {

@@ -45,11 +45,13 @@ int initialize_enclave(void)
 int SGX_CDECL main(int argc, char *argv[])
 {
     volatile int i = 0;
-    while (i == 0){
+    while (i == 1){
         sleep(2);
     }
     arguments args = parseArgs(argc, argv);
     MPI_Init(&argc, &argv);
     initialize_enclave();
     ecall_start_hash_join(global_eid, &args);
+    sgx_destroy_enclave(global_eid);
+
 }
