@@ -21,21 +21,39 @@ def run(name: str, hosts: int, nodesPerHost: int, params: Dict[str, str], times:
         os.mkdir(modeName)
 
         print("Running " + modeName + " next " + str(times) + " times. Done ", end="", flush=True)
-        for run in range(1, times + 1):
+        runs = range(1, times + 1)
+        run = 1
+        errs = 0
+        while run in runs:
             previousDirs: List[str] = next(os.walk("."))[1]
             paramsToUse = params.copy()
             if mode == "caching":
                 paramsToUse["-p"] = str(packageSize)
-            executedProcess = subprocess.run(["/usr/mpi/gcc/openmpi-4.0.3rc4/bin/mpiexec" +
+            executedProcess: subprocess.CompletedProcess = subprocess.run(["/usr/mpi/gcc/openmpi-4.0.3rc4/bin/mpiexec" +
                                               " -H " + ",".join(listTimes(hostlist[:hosts], nodesPerHost)) +
+                                              " --oversubscribe "
                                               " /home/larose-ldap/sgx/artifacts/" + executable + " " +
                                               " ".join([key + " " + value for key, value in paramsToUse.items()])],
-                                             shell=True,
+                                             shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                              #stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT
                                              )
-            newDirs = substractList(next(os.walk("."))[1], previousDirs)
-            os.rename(newDirs[0], modeName + "/" + suffix + "Run" + str(run))
-            print(str(run) + (", " if run < times else ""), end="", flush=True)
+            output: List[str] = executedProcess.stdout.splitlines()
+            success = False
+            for line in output:
+                if line.find("RESULTS") != -1:
+                    success = True
+            if success:
+                newDirs = substractList(next(os.walk("."))[1], previousDirs)
+                os.rename(newDirs[0], modeName + "/" + suffix + "Run" + str(run))
+                print(str(run) + (", " if run < times else ""), end="", flush=True)
+                run += 1
+            else:
+                print("ERROR, " + str(5 - errs) + " tries left"),
+                print("\n".join(output))
+                print(executedProcess.stderr)
+                errs += 1
+                if errs >= 5:
+                    break
         print("\n", end="")
 
     baseName = name + "/" + str(hosts) + "x" + str(nodesPerHost) + "-" + ",".join([key + "=" + value for key, value in params.items()])
@@ -64,28 +82,30 @@ def listTimes(list: List, times: int)-> List:
     return result
 
 #Vary Tuples per Node
-runVaried("TuplesPerNode", maxHost, 1, {'-p': '128'}, '-t', [1000, 10000, 100000, 1000*1000, 5*1000*10000], times, True)
+#runVaried("TuplesPerNode", maxHost, 1, {'-p': '128'}, '-t', [1000, 10000, 100000, 1000*1000, 5*1000*1000], times, True)
 
 #Vary Nodes Per Host, with same amount of data per Host
-for perHost in range(1,perNode):
-    run("NodesPerHostConstant", perHost, {'-p': '128', '-t': str(5*1000*1000//perHost)}, times, True)
+#for perHost in range(15, perNode + 1):
+#    run("NodesPerHostConstant", maxHost, perHost, {'-p': '128', '-t': str(5*1000*1000//perHost)}, times, True)
 
 #Vary Nodes per Host with increasing amount of data per Host
-for perHost in range(1,perNode):
-    run("NodesPerHostIncreasing", maxHost, perHost, {'-p': '128', '-t': str(5*1000*1000)}, times, True)
+#for perHost in range(15, perNode + 1):
+#    run("NodesPerHostIncreasing", maxHost, perHost, {'-p': '128', '-t': str(5*1000*1000)}, times, True)
 
 #Vary Hosts with fixed amount of data
-for hosts in range(2, maxHost + 1):
-    run("HostsFixedData", hosts, 1, {'-p': '128', '-t': str(10*1000*1000//hosts)}, times, True)
+#for hosts in range(2, maxHost + 1):
+#    run("HostsFixedData", hosts, 1, {'-p': '128', '-t': str(10*1000*1000//hosts)}, times, True)
 
 #Vary Network Partitioning Fanout
-runVaried("NetworkPart", maxHost, 1, {'-p': '128', '-t': str(1000*1000*5)}, '-n', [5, 6, 7, 8, 9, 10, 11, 12], times, True)
+#runVaried("NetworkPart", maxHost, 1, {'-p': '128', '-t': str(1000*1000*5)}, '-n', [5, 6, 7, 8, 9, 10, 11, 12], times, True)
 
 #Vary Local Partitioning Fanout
-runVaried("LocalPart", maxHost, 1, {'-p': '128', '-t': str(1000*1000*5)}, '-l', [5, 6, 7, 8, 9, 10, 11, 12], times, True)
+#runVaried("LocalPart", maxHost, 1, {'-p': '128', '-t': str(1000*1000*5)}, '-l', [5, 6, 7, 8, 9, 10, 11, 12], times, True)
 
 #Vary Package Size
-runVaried("PackageSize", maxHost, 1, {'-t': str(1000*1000*5)}, '-p', [32, 64, 128, 256, 512, 1024, 2048], times, False)
+#runVaried("PackageSize", maxHost, 1, {'-t': str(1000*1000*5)}, '-p', [32, 64, 128, 256, 512, 1024, 2048], times, False)
 
 #Vary Data Skew
-runVaried("DataSkew", maxHost, 1, {'-t': str(1000*1000*5), '-p': '128', '-s': str(5*1000*1000)}, '-z', [1, 2, 3, 4, 5], times, False)
+#runVaried("DataSkew", maxHost, 1, {'-t': str(1000*1000*5), '-p': '128', '-s': str(5*1000*1000)}, '-z', [0.2, 0.4, 0.6, 0.8, 1], times, False)
+
+runVaried("DataSkewSize", maxHost, 1, {'-t': str(1000*1000*5), '-p': '128', '-z': str(1)}, '-s', [5*1000, 50*1000, 500*1000, 5*1000*1000], times, False)

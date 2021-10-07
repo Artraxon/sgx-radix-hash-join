@@ -1,17 +1,21 @@
 import os
+import shutil
+import re
 from typing import List
 from ClusterGraphs import plot_clustered_stacked
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import pandas as pd
 
+
 def loadData(identifier: str, keys: List[str], varkeys: List[str]) -> pd.DataFrame:
-    df = pd.DataFrame(columns = ["mode"] + varkeys + keys)
+    df = pd.DataFrame(columns=["mode"] + varkeys + keys)
     for configuration in next(os.walk(identifier))[1]:
         mode = configuration.split("-")[-1]
-        varparams = configuration.split(",")[-len(varkeys):]
+        varparams = re.split(",|--", configuration)[-len(varkeys):]
         varparams[-1] = varparams[-1].split("-")[1]
-        varparams = [it.split("=")[1] for it in varparams]
+        varparams = [it.split("=")[1] if len(it.split("=")) > 1 else it for it in varparams]
+        varparams = varparams[0].split("x") + varparams[1:]
         varmap = dict(zip(varkeys, varparams))
         varmap["mode"] = mode
         tempdfs: List[pd.DataFrame] = []
@@ -30,26 +34,83 @@ def loadData(identifier: str, keys: List[str], varkeys: List[str]) -> pd.DataFra
         means = totalResults.mean()
         ids = pd.Series(varmap)
         df = df.append(pd.DataFrame([ids.append(means)]))
-    print("hi")
     return df
 
 
-df = loadData("TuplesPerNode", ["JTOTAL", "JHIST", "JMPI", "JPROC", "SWINALLOC", "SUNSEAL"], ["Tuples"])
-df.sort_values(by=["Tuples"], inplace=True)
-nocacheDF = df.loc[df['mode'] == 'nocache']
-nativeDF = df.loc[df['mode'] == "native"]
-plot_clustered_stacked([nocacheDF, nativeDF], ["nocache", "cache"])
-plt.yscale("log")
-plt.show()
+dirs = ["TuplesPerNode", "NodesPerHostConstant", "NodesPerHostIncreasing", "HostsFixedData", "NetworkPart", "LocalPart",
+        "PackageSize", "DataSkew"]
+columns = ["JHIST", "JMPI", "JPROC", "SWINALLOC", "SUNSEAL"]
 
-# fig, ax = plt.subplots()
-# ax: plt.Axes = ax
-# width = 0.35
-# ax.bar(tupleDF.Tuples, tupleDF.SUNSEAL, width, label='Unsealing')
-# ax.bar(tupleDF.Tuples, tupleDF.JHIST, width, label='Histogram', bottom=tupleDF.SUNSEAL)
-# ax.bar(tupleDF.Tuples, tupleDF.SWINALLOC, width, label='Window Allocation', bottom=tupleDF.JHIST)
-# ax.bar(tupleDF.Tuples, tupleDF.JMPI, width, label='Network Partitioning', bottom=tupleDF.SWINALLOC)
-# ax.bar(tupleDF.Tuples, tupleDF.JPROC, width, label='Local Partitioning', bottom=tupleDF.JMPI)
-# ax.legend()
-# plt.yscale("log")
-# plt.show()
+if "graphs" in next(os.walk("."))[1]:
+    shutil.rmtree("graphs")
+os.mkdir("graphs")
+
+
+def genGraph(dir: str, cols: List[str], rows: List, varkeys: List[str] = ["Tuples"], filterBy: str = "Tuples",
+             nocache: bool = True,
+             name: str = None):
+    if name is None:
+        name = dir
+    print("Loading data for " + dir)
+    df = loadData(dir, cols, varkeys)
+    for col in varkeys:
+        if col is filterBy:
+            df[col] = df[col].astype(type(rows[0]))
+        else:
+            df[col] = df[col].astype(int)
+    df = df[df[filterBy].isin(rows)]
+    df.sort_values(by=[filterBy], inplace=True)
+    for column in cols:
+        df[column] = df[column] / (df['Tuples'] * df["Hosts"] * df["PerHost"])
+    df.set_index(filterBy)
+    for column in df.columns:
+        if column not in cols + ["mode", filterBy]:
+            df.drop(column, axis=1, inplace=True)
+
+    dfs = []
+    cacheDF: pd.DataFrame = df.loc[df['mode'] == 'caching'].drop("mode", axis=1).set_index(filterBy)
+    dfs.append(cacheDF)
+    if nocache:
+        nocacheDF: pd.DataFrame = df.loc[df['mode'] == 'nocache'].drop("mode", axis=1).set_index(filterBy)
+        dfs.append(nocacheDF)
+        plot_clustered_stacked(dfs, ["caching", "noncaching"], title=name)
+    else:
+        cacheDF.plot(kind="bar", stacked=True)
+    # plt.yscale("log")
+    # nocacheDF.plot(kind="bar", stacked=True)
+    # plt.show()
+    # cacheDF.plot(kind="bar", stacked=True)
+    plt.tight_layout(pad=2)
+    plt.savefig("graphs/" + name + ".png")
+    nativeDF: pd.DataFrame = df.loc[df['mode'] == "native"].drop(["mode"], axis=1)
+    if "SUNSEAL" in nativeDF.columns:
+        nativeDF.drop(["SUNSEAL"], axis=1, inplace=True)
+    nativeDF.set_index(filterBy, inplace=True)
+    if nativeDF.size > 0:
+        nativeDF.plot(kind="bar", stacked=True)
+        plt.tight_layout(pad=2)
+        plt.savefig("graphs/" + name + "-native.png")
+    print("generated " + name)
+    plt.clf()
+
+
+genGraph("TuplesPerNode", columns, [1000, 10000, 100 * 1000, 1000 * 1000, 5 * 1000 * 1000],
+         ["Hosts", "PerHost", "packageSize", "Tuples"],
+         "Tuples")
+genGraph("NodesPerHostConstant", columns, [1, 2, 4, 8, 16], ["Hosts", "PerHost", "packageSize", "Tuples"], "PerHost")
+genGraph("NodesPerHostIncreasing",
+         columns,
+         [1, 2, 4, 8, 16],
+         ["Hosts", "PerHost", "packageSize", "Tuples"],
+         "PerHost")
+
+genGraph("PackageSize", columns, [64, 128, 256, 512, 1024, 2048], ["Hosts", "PerHost", "Tuples", "packageSize"],
+         "packageSize", False)
+genGraph("HostsFixedData", columns, range(2, 16, 3), ["Hosts", "PerHost", "packageSize", "Tuples"], "Hosts", True)
+
+genGraph("NetworkPart", columns, range(5, 11), ["Hosts", "PerHost", "packageSize", "Tuples", "NPart"], "NPart")
+genGraph("LocalPart", columns, range(5, 11), ["Hosts", "PerHost", "packageSize", "Tuples", "LPart"], "LPart")
+genGraph("DataSkew", columns, [0.2, 0.4, 0.6, 0.8, 1],
+         ["Hosts", "PerHost", "Tuples", "packageSize", "ZipfSize", "ZipfFactor"], "ZipfFactor")
+
+genGraph("LocalPart", ["LPHISTCOMP", "LPPART", "BPMEMALLOC", "BPBUILD", "BPPROBE"], range(5, 11), ["Hosts", "PerHost", "packageSize", "Tuples", "LPart"], "LPart", name="Local Partitioning Local Processing")
