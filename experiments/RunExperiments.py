@@ -10,7 +10,7 @@ maxHost = 15
 perNode = 16
 times = 5
 
-def run(name: str, hosts: int, nodesPerHost: int, params: Dict[str, str], times: int, native: bool, suffix: str = ""):
+def run(name: str, hosts: int, nodesPerHost: int, params: Dict[str, str], times: int, native: bool, suffix: str = "", nocache: bool = True, cache: bool = True):
     if name not in next(os.walk("."))[1]:
         os.mkdir(name)
 
@@ -57,8 +57,10 @@ def run(name: str, hosts: int, nodesPerHost: int, params: Dict[str, str], times:
         print("\n", end="")
 
     baseName = name + "/" + str(hosts) + "x" + str(nodesPerHost) + "-" + ",".join([key + "=" + value for key, value in params.items()])
-    execute("nocache", "hashj-app")
-    execute("caching", "hashj-app", 64)
+    if cache:
+        execute("caching", "hashj-app", 128)
+    if nocache:
+        execute("nocache", "hashj-app")
     if native:
         execute("native", "cahj-bin")
 
@@ -69,11 +71,11 @@ def substractList(list1: List, list2: List)-> List:
             result.append(it)
     return result
 
-def runVaried(name: str, hosts: int, nodesPerHost: int, fixedParams: Dict[str, str], key: str, args: List, times, native: bool):
+def runVaried(name: str, hosts: int, nodesPerHost: int, fixedParams: Dict[str, str], key: str, args: List, times, native: bool, nocache: bool = True, cache: bool = True):
     for arg in args:
         newParams = fixedParams.copy()
         newParams.update({key: str(arg)})
-        run(name, hosts, nodesPerHost, newParams, times, native)
+        run(name, hosts, nodesPerHost, newParams, times, native, nocache=nocache, cache=cache)
 
 def listTimes(list: List, times: int)-> List:
     result = []
@@ -82,30 +84,33 @@ def listTimes(list: List, times: int)-> List:
     return result
 
 #Vary Tuples per Node
-#runVaried("TuplesPerNode", maxHost, 1, {'-p': '128'}, '-t', [1000, 10000, 100000, 1000*1000, 5*1000*1000], times, True)
+runVaried("TuplesPerNode", maxHost, 1, {}, '-t', [1000, 10000, 100000, 1000*1000, 5*1000*1000], times, True)
 
 #Vary Nodes Per Host, with same amount of data per Host
-#for perHost in range(15, perNode + 1):
-#    run("NodesPerHostConstant", maxHost, perHost, {'-p': '128', '-t': str(5*1000*1000//perHost)}, times, True)
+for perHost in range(1, perNode + 1):
+    run("NodesPerHostConstant", maxHost, perHost, {'-t': str(5*1000*1000//perHost)}, times, True)
 
 #Vary Nodes per Host with increasing amount of data per Host
-#for perHost in range(15, perNode + 1):
-#    run("NodesPerHostIncreasing", maxHost, perHost, {'-p': '128', '-t': str(5*1000*1000)}, times, True)
+for perHost in range(1, perNode + 1):
+    run("NodesPerHostIncreasing", maxHost, perHost, {'-t': str(5*1000*1000)}, times, True)
 
 #Vary Hosts with fixed amount of data
-#for hosts in range(2, maxHost + 1):
-#    run("HostsFixedData", hosts, 1, {'-p': '128', '-t': str(10*1000*1000//hosts)}, times, True)
+for hosts in range(2, maxHost + 1):
+    run("HostsFixedData", hosts, 1, {'-t': str(10*1000*1000//hosts)}, times, True)
+
+for hosts in range(1, maxHost + 1):
+    run("HostsIncreasingData", hosts, 1, {'-t': str(5*1000*1000)}, times, True)
 
 #Vary Network Partitioning Fanout
-#runVaried("NetworkPart", maxHost, 1, {'-p': '128', '-t': str(1000*1000*5)}, '-n', [5, 6, 7, 8, 9, 10, 11, 12], times, True)
+runVaried("NetworkPart", maxHost, 1, {'-t': str(1000*1000*5)}, '-n', [5, 6, 7, 8, 9, 10, 11, 12], times, True)
 
 #Vary Local Partitioning Fanout
-#runVaried("LocalPart", maxHost, 1, {'-p': '128', '-t': str(1000*1000*5)}, '-l', [5, 6, 7, 8, 9, 10, 11, 12], times, True)
+runVaried("LocalPart", maxHost, 1, {'-t': str(1000*1000*5)}, '-l', [5, 6, 7, 8, 9, 10, 11, 12], times, True)
 
 #Vary Package Size
-#runVaried("PackageSize", maxHost, 1, {'-t': str(1000*1000*5)}, '-p', [32, 64, 128, 256, 512, 1024, 2048], times, False)
+runVaried("PackageSize", maxHost, 1, {'-t': str(1000*1000*5)}, '-p', [32, 64, 128, 256, 512, 1024, 2048], times, False, cache=False)
 
 #Vary Data Skew
-#runVaried("DataSkew", maxHost, 1, {'-t': str(1000*1000*5), '-p': '128', '-s': str(5*1000*1000)}, '-z', [0.2, 0.4, 0.6, 0.8, 1], times, False)
+runVaried("DataSkew", maxHost, 1, {'-t': str(1000*1000*1), '-s': str(1*1000*1000)}, '-z', [1, 2, 3, 4, 5], times, False)
 
-runVaried("DataSkewSize", maxHost, 1, {'-t': str(1000*1000*5), '-p': '128', '-z': str(1)}, '-s', [5*1000, 50*1000, 500*1000, 5*1000*1000], times, False)
+runVaried("DataSkewSize", maxHost, 1, {'-t': str(1000*1000*5), '-z': str(1)}, '-s', [5*1000, 50*1000, 500*1000, 5*1000*1000], times, False)
