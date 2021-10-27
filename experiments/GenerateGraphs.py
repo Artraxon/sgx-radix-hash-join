@@ -91,11 +91,11 @@ def genGraph(dir: str, cols: List[str], rows: List, varkeys: List[str] = ["Tuple
         plot_clustered_stacked(dfs, ["caching", "noncaching"], title=name)
         legend = False
     elif not nocache:
-        cacheDF.plot(kind="bar", stacked=True)
+        cacheDF.plot(kind="bar", stacked=True, edgecolor="black", linewidth=0.3)
         plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
     else:
         nocacheDF: pd.DataFrame = df.loc[df['mode'] == 'nocache'].drop("mode", axis=1).set_index(filterBy)
-        nocacheDF.plot(kind="bar", stacked=True)
+        nocacheDF.plot(kind="bar", stacked=True, edgecolor="black", linewidth=0.3)
         plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 
     # plt.yscale("log")
@@ -109,14 +109,28 @@ def genGraph(dir: str, cols: List[str], rows: List, varkeys: List[str] = ["Tuple
         nativeDF.drop(["SUNSEAL"], axis=1, inplace=True)
     nativeDF.set_index(filterBy, inplace=True)
     if nativeDF.size > 0:
-        nativeDF.plot(kind="bar", stacked=True)
+        nativeDF.plot(kind="bar", stacked=True, edgecolor="black", linewidth=0.3)
+        plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
         plt.tight_layout(pad=2)
         plt.savefig("graphs/" + name + "-native.png")
     print("generated " + name)
     plt.clf()
 
 
-genGraph("TuplesPerNode", columns, [1000, 10000, 100 * 1000, 1000 * 1000, 5 * 1000 * 1000],
+genGraph("HostsIncreasingData", columns, range(1, 16, 1), ["Hosts", "PerHost", "Tuples"], "Hosts", True)
+genGraph("TuplesPerNode",
+         ["LPHISTCOMP", "LPPART", "BPMEMALLOC", "BPBUILD", "BPPROBE"],
+         [1000 * 1000, 5 * 1000 * 1000, 10*1000*1000, 15*1000*1000, 20*1000*1000],
+         ["Hosts", "PerHost", "Tuples"],
+         "Tuples",
+         name="Tuples Per Node Local Processing",
+         nocache=False)
+genGraph("TuplesPerNode", columns, [1000, 10000, 100 * 1000, 1000 * 1000],
+         ["Hosts", "PerHost", "Tuples"],
+        "Tuples",
+         name="Tuples Small")
+
+genGraph("TuplesPerNode", columns, [1000 * 1000, 5 * 1000 * 1000, 10*1000*1000, 15*1000*1000, 20*1000*1000],
          ["Hosts", "PerHost", "Tuples"],
          "Tuples")
 genGraph("NodesPerHostConstant", columns, [1, 2, 4, 8, 16], ["Hosts", "PerHost", "Tuples"], "PerHost")
@@ -129,6 +143,7 @@ genGraph("NodesPerHostIncreasing",
 genGraph("PackageSize", columns, [64, 128, 256, 512, 1024, 2048], ["Hosts", "PerHost", "Tuples", "packageSize"],
          "packageSize", True)
 genGraph("HostsFixedData", columns, range(2, 16, 3), ["Hosts", "PerHost", "Tuples"], "Hosts", True)
+#
 
 genGraph("NetworkPart", columns, range(5, 11), ["Hosts", "PerHost", "Tuples", "NPart"], "NPart")
 genGraph("LocalPart", columns, range(5, 11), ["Hosts", "PerHost", "Tuples", "LPart"], "LPart")
@@ -136,6 +151,14 @@ genGraph("LocalPart", columns, range(5, 11), ["Hosts", "PerHost", "Tuples", "LPa
 genGraph("DataSkew", columns, [1, 2, 3, 4, 5],
          ["Hosts", "PerHost", "Tuples", "ZipfSize", "ZipfFactor"], "ZipfFactor", maxBy="JTOTAL", normalize=False)
 
-genGraph("LocalPart", ["LPHISTCOMP", "LPPART", "BPMEMALLOC", "BPBUILD", "BPPROBE"], range(5, 11), ["Hosts", "PerHost", "Tuples", "LPart"], "LPart", name="Local Partitioning Local Processing")
+genGraph("LocalPart",
+         ["LPHISTCOMP", "LPPART", "BPMEMALLOC", "BPBUILD", "BPPROBE"],
+         range(5, 11),
+         ["Hosts", "PerHost", "Tuples", "LPart"],
+         "LPart",
+         name="Local Partitioning Local Processing",
+         nocache=False)
+
+
 
 #genGraph("DataSkewSize", columns, [5*1000, 50*1000, 500*1000, 5*1000*1000], ["Hosts", "PerHost", "Tuples", "packageSize", "ZipfFactor", "ZipfSize"], "ZipfSize",)
