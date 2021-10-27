@@ -38,9 +38,6 @@ BuildProbe::BuildProbe(uint64_t innerPartitionSize, hpcjoin::data::CompressedTup
 
 	this->outerPartitionSize = outerPartitionSize;
 	this->outerPartition = outerPartition;
-
-    auto tuple = std::tuple<uint64_t, uint64_t>(innerPartitionSize, outerPartitionSize);
-
 }
 
 BuildProbe::~BuildProbe() {
