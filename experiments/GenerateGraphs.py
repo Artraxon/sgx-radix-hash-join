@@ -88,7 +88,7 @@ def genGraph(dir: str, cols: List[str], rows: List, varkeys: List[str] = ["Tuple
     if nocache and cacheDF.size > 0:
         nocacheDF: pd.DataFrame = df.loc[df['mode'] == 'nocache'].drop("mode", axis=1).set_index(filterBy)
         dfs.append(nocacheDF)
-        plot_clustered_stacked(dfs, ["caching", "noncaching"], title=name)
+        plot_clustered_stacked(dfs, ["caching", "noncaching"], title="")
         legend = False
     elif not nocache:
         cacheDF.plot(kind="bar", stacked=True, edgecolor="black", linewidth=0.3)
@@ -109,15 +109,16 @@ def genGraph(dir: str, cols: List[str], rows: List, varkeys: List[str] = ["Tuple
         nativeDF.drop(["SUNSEAL"], axis=1, inplace=True)
     nativeDF.set_index(filterBy, inplace=True)
     if nativeDF.size > 0:
-        nativeDF.plot(kind="bar", stacked=True, edgecolor="black", linewidth=0.3)
-        plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+        nativeDF.plot(kind="bar", stacked=True, edgecolor="black", linewidth=0.3, legend=None)
+        #plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
         plt.tight_layout(pad=2)
         plt.savefig("graphs/" + name + "-native.png")
     print("generated " + name)
     plt.clf()
 
 
-genGraph("HostsIncreasingData", columns, range(1, 16, 1), ["Hosts", "PerHost", "Tuples"], "Hosts", True)
+genGraph("HostsIncreasingData", columns, range(1, 7, 1), ["Hosts", "PerHost", "Tuples"], "Hosts", True, name="HostsIncreasingData 1-6")
+genGraph("HostsIncreasingData", columns, range(6, 16, 2), ["Hosts", "PerHost", "Tuples"], "Hosts", True, name="HostsIncreasingData 6-16")
 genGraph("TuplesPerNode",
          ["LPHISTCOMP", "LPPART", "BPMEMALLOC", "BPBUILD", "BPPROBE"],
          [1000 * 1000, 5 * 1000 * 1000, 10*1000*1000, 15*1000*1000, 20*1000*1000],
@@ -141,7 +142,7 @@ genGraph("NodesPerHostIncreasing",
          "PerHost")
 
 genGraph("PackageSize", columns, [64, 128, 256, 512, 1024, 2048], ["Hosts", "PerHost", "Tuples", "packageSize"],
-         "packageSize", True)
+         "packageSize", False)
 genGraph("HostsFixedData", columns, range(2, 16, 3), ["Hosts", "PerHost", "Tuples"], "Hosts", True)
 #
 
