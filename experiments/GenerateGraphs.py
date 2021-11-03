@@ -57,11 +57,20 @@ if "graphs" in next(os.walk("."))[1]:
 os.mkdir("graphs")
 
 
-def genGraph(dir: str, cols: List[str], rows: List, varkeys: List[str] = ["Tuples"], filterBy: str = "Tuples",
+def genGraph(dir: str, colgroups: List, rows: List, varkeys: List[str] = ["Tuples"], filterBy: str = "Tuples",
              nocache: bool = True,
              name: str = None,
              maxBy: str = None,
-             normalize: bool = True):
+             normalize: bool = True,
+             ylabel: str = "us/Tuple",
+             xlabel: str = "Nodes",
+             yfactor: float = 1,
+             xfactor: float = 1):
+    for group in colgroups:
+        if isinstance(group, str):
+            colgroups.append((group, [group]))
+    colgroups = [group for group in colgroups if isinstance(group, tuple)]
+    cols = [col for tuple in colgroups for col in tuple[1]]
     if name is None:
         name = dir
     print("Loading data for " + dir)
@@ -80,6 +89,9 @@ def genGraph(dir: str, cols: List[str], rows: List, varkeys: List[str] = ["Tuple
     for column in df.columns:
         if column not in cols + ["mode", filterBy]:
             df.drop(column, axis=1, inplace=True)
+    for group in colgroups:
+        df[group[0]] = df[group[1]].sum(axis=1)
+        df.drop([col for col in group[1] if col != group[0]])
 
     dfs = []
     cacheDF: pd.DataFrame = df.loc[df['mode'] == 'caching'].drop("mode", axis=1).set_index(filterBy)
@@ -143,7 +155,8 @@ genGraph("NodesPerHostIncreasing",
 
 genGraph("PackageSize", columns, [64, 128, 256, 512, 1024, 2048], ["Hosts", "PerHost", "Tuples", "packageSize"],
          "packageSize", False)
-genGraph("HostsFixedData", columns, range(2, 16, 3), ["Hosts", "PerHost", "Tuples"], "Hosts", True)
+genGraph("HostsFixedData", columns, range(2, 16, 2), ["Hosts", "PerHost", "Tuples"], "Hosts", True)
+genGraph("HostsFixedData", ["LPHISTCOMP", "LPPART", "BPMEMALLOC", "BPBUILD", "BPPROBE"], range(2, 16, 2), ["Hosts", "PerHost", "Tuples"], "Hosts", True, name="HostsFixedData Local")
 #
 
 genGraph("NetworkPart", columns, range(5, 11), ["Hosts", "PerHost", "Tuples", "NPart"], "NPart")
