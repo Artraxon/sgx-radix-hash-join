@@ -50,7 +50,6 @@ def loadData(identifier: str, keys: List[str], varkeys: List[str], maxBy: str = 
 
 dirs = ["TuplesPerNode", "NodesPerHostConstant", "NodesPerHostIncreasing", "HostsFixedData", "NetworkPart", "LocalPart",
         "PackageSize", "DataSkew"]
-columns = ["JHIST", "JMPI", "JPROC", "SWINALLOC", "SUNSEAL"]
 
 if "graphs" in next(os.walk("."))[1]:
     shutil.rmtree("graphs")
@@ -65,10 +64,12 @@ def genGraph(dir: str, colgroups: List, rows: List, varkeys: List[str] = ["Tuple
              ylabel: str = "us/Tuple",
              xlabel: str = "Nodes",
              yfactor: float = 1,
-             xfactor: float = 1):
-    for group in colgroups:
+             xfactor: float = 1,
+             colors: List = None):
+    colgroups = colgroups.copy()
+    for i, group in enumerate(colgroups):
         if isinstance(group, str):
-            colgroups.append((group, [group]))
+            colgroups[i] = ((group, [group]))
     colgroups = [group for group in colgroups if isinstance(group, tuple)]
     cols = [col for tuple in colgroups for col in tuple[1]]
     if name is None:
@@ -91,8 +92,13 @@ def genGraph(dir: str, colgroups: List, rows: List, varkeys: List[str] = ["Tuple
             df.drop(column, axis=1, inplace=True)
     for group in colgroups:
         df[group[0]] = df[group[1]].sum(axis=1)
-        df.drop([col for col in group[1] if col != group[0]])
+        toDrop = [col for col in group[1] if col != group[0]]
+        df.drop(toDrop, axis=1, inplace=True)
+    for group in colgroups:
+        if len(group) > 2:
+            df[group[2]] -= df[group[0]]
 
+    df = df[["mode", filterBy] + [group[0] for group in colgroups]]
     dfs = []
     cacheDF: pd.DataFrame = df.loc[df['mode'] == 'caching'].drop("mode", axis=1).set_index(filterBy)
     dfs.append(cacheDF)
@@ -100,7 +106,7 @@ def genGraph(dir: str, colgroups: List, rows: List, varkeys: List[str] = ["Tuple
     if nocache and cacheDF.size > 0:
         nocacheDF: pd.DataFrame = df.loc[df['mode'] == 'nocache'].drop("mode", axis=1).set_index(filterBy)
         dfs.append(nocacheDF)
-        plot_clustered_stacked(dfs, ["caching", "noncaching"], title="")
+        plot_clustered_stacked(dfs, ["caching", "noncaching"], title="", colors=colors)
         legend = False
     elif not nocache:
         cacheDF.plot(kind="bar", stacked=True, edgecolor="black", linewidth=0.3)
@@ -109,7 +115,6 @@ def genGraph(dir: str, colgroups: List, rows: List, varkeys: List[str] = ["Tuple
         nocacheDF: pd.DataFrame = df.loc[df['mode'] == 'nocache'].drop("mode", axis=1).set_index(filterBy)
         nocacheDF.plot(kind="bar", stacked=True, edgecolor="black", linewidth=0.3)
         plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
-
     # plt.yscale("log")
     # nocacheDF.plot(kind="bar", stacked=True)
     # plt.show()
@@ -128,7 +133,17 @@ def genGraph(dir: str, colgroups: List, rows: List, varkeys: List[str] = ["Tuple
     print("generated " + name)
     plt.clf()
 
+columns = ["JHIST", "JMPI", "JPROC", "SWINALLOC", "SUNSEAL"]
+networkColumns = [("NALLOC",  ["MIMEMALLOC", "MOMEMALLOC"]), ("NMAIN", ["MIMAINPART", "MOMAINPART"]), ("NFLUSH", ["MIFLUSHPART", "MOFLUSHPART"]),
+                  ("MWINPUT", ["MWINPUT"], "NMAIN"), ("MWINWAIT", ["MWINWAIT"], "NMAIN"), ("MWSEAL", ["MWSEAL"], "NMAIN")]
 
+allPlusNetwork = [columns[0]] + networkColumns + columns[2:]
+
+defaultColors = ["tab:blue", "tab:orange", "tab:green", "tab:red", "tab:purple"]
+networkColors = ["tab:brown", "violet", "silver", "gold", "darkturquoise", "cornflowerblue"]
+mixedColors = [defaultColors[0]] + networkColors + defaultColors[2:]
+
+genGraph("NodesPerHostConstant", allPlusNetwork, [1, 2, 4, 8, 16], ["Hosts", "PerHost", "Tuples"], "PerHost", colors=mixedColors)
 genGraph("HostsIncreasingData", columns, range(1, 7, 1), ["Hosts", "PerHost", "Tuples"], "Hosts", True, name="HostsIncreasingData 1-6")
 genGraph("HostsIncreasingData", columns, range(6, 16, 2), ["Hosts", "PerHost", "Tuples"], "Hosts", True, name="HostsIncreasingData 6-16")
 genGraph("TuplesPerNode",
@@ -146,7 +161,6 @@ genGraph("TuplesPerNode", columns, [1000, 10000, 100 * 1000, 1000 * 1000],
 genGraph("TuplesPerNode", columns, [1000 * 1000, 5 * 1000 * 1000, 10*1000*1000, 15*1000*1000, 20*1000*1000],
          ["Hosts", "PerHost", "Tuples"],
          "Tuples")
-genGraph("NodesPerHostConstant", columns, [1, 2, 4, 8, 16], ["Hosts", "PerHost", "Tuples"], "PerHost")
 genGraph("NodesPerHostIncreasing",
          columns,
          [1, 2, 4, 8, 16],
