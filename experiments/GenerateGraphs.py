@@ -126,7 +126,18 @@ def genGraph(dir: str, colgroups: List, rows: List, varkeys: List[str] = ["Tuple
         nativeDF.drop(["SUNSEAL"], axis=1, inplace=True)
     nativeDF.set_index(filterBy, inplace=True)
     if nativeDF.size > 0:
-        nativeDF.plot(kind="bar", stacked=True, edgecolor="black", linewidth=0.3, legend=None)
+        if colors is not None:
+            #colors = colors[:6] + colors[7:]
+            nativeDF[nativeDF < 0] = 0
+            axe = nativeDF.plot(kind="bar", stacked=True, edgecolor="black", linewidth=0.3, legend=None)
+            h, l = axe.get_legend_handles_labels()  # get the handles we want to modify
+            cols = len(nativeDF.columns)
+            for i in range(0, cols, cols):  # len(h) = n_col * n_df
+                for j, pa in enumerate(h[i:i + cols]):
+                    for rect in pa.patches:  # for each index
+                            rect.set_facecolor(colors[j])
+        else:
+            nativeDF.plot(kind="bar", stacked=True, edgecolor="black", linewidth=0.3, legend=None)
         #plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
         plt.tight_layout(pad=2)
         plt.savefig("graphs/" + name + "-native.png")
@@ -140,10 +151,11 @@ networkColumns = [("NALLOC",  ["MIMEMALLOC", "MOMEMALLOC"]), ("NMAIN", ["MIMAINP
 allPlusNetwork = [columns[0]] + networkColumns + columns[2:]
 
 defaultColors = ["tab:blue", "tab:orange", "tab:green", "tab:red", "tab:purple"]
-networkColors = ["tab:brown", "violet", "silver", "gold", "darkturquoise", "cornflowerblue"]
+networkColors = ["palegreen", "pink", "silver", "gold", "darkturquoise", "cornflowerblue"]
 mixedColors = [defaultColors[0]] + networkColors + defaultColors[2:]
 
-genGraph("NodesPerHostConstant", allPlusNetwork, [1, 2, 4, 8, 16], ["Hosts", "PerHost", "Tuples"], "PerHost", colors=mixedColors)
+#genGraph("NodesPerHostConstant", allPlusNetwork, [1, 2, 4, 8, 16], ["Hosts", "PerHost", "Tuples"], "PerHost", colors=mixedColors)
+genGraph("NodesPerHostConstant", allPlusNetwork, range(2, 17, 2), ["Hosts", "PerHost", "Tuples"], "PerHost", colors=mixedColors, name="NodesPerHostConstantLong")
 genGraph("HostsIncreasingData", columns, range(1, 7, 1), ["Hosts", "PerHost", "Tuples"], "Hosts", True, name="HostsIncreasingData 1-6")
 genGraph("HostsIncreasingData", columns, range(6, 16, 2), ["Hosts", "PerHost", "Tuples"], "Hosts", True, name="HostsIncreasingData 6-16")
 genGraph("TuplesPerNode",
@@ -168,7 +180,7 @@ genGraph("NodesPerHostIncreasing",
          "PerHost")
 
 genGraph("PackageSize", columns, [64, 128, 256, 512, 1024, 2048], ["Hosts", "PerHost", "Tuples", "packageSize"],
-         "packageSize", False)
+         "packageSize")
 genGraph("HostsFixedData", columns, range(2, 16, 2), ["Hosts", "PerHost", "Tuples"], "Hosts", True)
 genGraph("HostsFixedData", ["LPHISTCOMP", "LPPART", "BPMEMALLOC", "BPBUILD", "BPPROBE"], range(2, 16, 2), ["Hosts", "PerHost", "Tuples"], "Hosts", True, name="HostsFixedData Local")
 #
@@ -176,7 +188,7 @@ genGraph("HostsFixedData", ["LPHISTCOMP", "LPPART", "BPMEMALLOC", "BPBUILD", "BP
 genGraph("NetworkPart", columns, range(5, 11), ["Hosts", "PerHost", "Tuples", "NPart"], "NPart")
 genGraph("LocalPart", columns, range(5, 11), ["Hosts", "PerHost", "Tuples", "LPart"], "LPart")
 
-genGraph("DataSkew", columns, [1, 2, 3, 4, 5],
+genGraph("DataSkew", columns, [1.0, 2, 3, 4, 5],
          ["Hosts", "PerHost", "Tuples", "ZipfSize", "ZipfFactor"], "ZipfFactor", maxBy="JTOTAL", normalize=False)
 
 genGraph("LocalPart",
