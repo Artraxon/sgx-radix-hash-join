@@ -49,8 +49,6 @@ H is the hatch used for identification of the different dataframe"""
                 #rect.set_width(1 / float(n_df + 1))
                 rect.set_width(width)
 
-
-
     axe.set_xticks((np.arange(0, 2 * n_ind, 2) + 1 / float(n_df + 1)) / 2.)
     axe.set_xticklabels(dfall[0].index, rotation = 0)
     axe.set_title(title)
@@ -60,7 +58,7 @@ H is the hatch used for identification of the different dataframe"""
     for i in range(n_df):
         n.append(axe.bar(0, 0, color="gray", hatch=H * i))
 
-    l1 = axe.legend(h[:n_col], l[:n_col], loc=[1.01, 0.5])
+    l1 = axe.legend(h[n_col - 1::-1], l[n_col - 1::-1], loc=[1.01, 0.5])
     if labels is not None:
         l2 = plt.legend(n, labels, loc=[1.01, 0.1]) 
     axe.add_artist(l1)

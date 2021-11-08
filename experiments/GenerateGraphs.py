@@ -34,6 +34,7 @@ def loadData(identifier: str, keys: List[str], varkeys: List[str], maxBy: str = 
                                     interestingLines[splitted[0]] = [float(splitted[1])]
                         nodes.append(pd.DataFrame(interestingLines, index=[file.split(".")[0]]))
             tempdfs.append(nodes)
+            break
         result: pd.Series
         totalResults: pd.DataFrame
         if maxBy is None:
@@ -145,59 +146,71 @@ def genGraph(dir: str, colgroups: List, rows: List, varkeys: List[str] = ["Tuple
     plt.clf()
 
 columns = ["JHIST", "JMPI", "JPROC", "SWINALLOC", "SUNSEAL"]
+localColumns = ["LPHISTCOMP", "LPPART", "BPMEMALLOC", "BPBUILD", "BPPROBE"]
 networkColumns = [("NALLOC",  ["MIMEMALLOC", "MOMEMALLOC"]), ("NMAIN", ["MIMAINPART", "MOMAINPART"]), ("NFLUSH", ["MIFLUSHPART", "MOFLUSHPART"]),
                   ("MWINPUT", ["MWINPUT"], "NMAIN"), ("MWINWAIT", ["MWINWAIT"], "NMAIN"), ("MWSEAL", ["MWSEAL"], "NMAIN")]
 
 allPlusNetwork = [columns[0]] + networkColumns + columns[2:]
+allPlusLocal = columns[:2] + localColumns + columns[3:]
 
-defaultColors = ["tab:blue", "tab:orange", "tab:green", "tab:red", "tab:purple"]
+defaultColors = ["tab:blue", "tab:orange", "tab:olive", "mediumaquamarine", "tab:purple"]
 networkColors = ["palegreen", "pink", "silver", "gold", "darkturquoise", "cornflowerblue"]
-mixedColors = [defaultColors[0]] + networkColors + defaultColors[2:]
+localColors = ["midnightblue", "plum", "forestgreen", "darkkhaki", "azure"]
+networkMixedColors = [defaultColors[0]] + networkColors + defaultColors[2:]
+localMixedColors = defaultColors[:2] + localColors + defaultColors[3:]
 
 #genGraph("NodesPerHostConstant", allPlusNetwork, [1, 2, 4, 8, 16], ["Hosts", "PerHost", "Tuples"], "PerHost", colors=mixedColors)
-genGraph("NodesPerHostConstant", allPlusNetwork, range(2, 17, 2), ["Hosts", "PerHost", "Tuples"], "PerHost", colors=mixedColors, name="NodesPerHostConstantLong")
-genGraph("HostsIncreasingData", columns, range(1, 7, 1), ["Hosts", "PerHost", "Tuples"], "Hosts", True, name="HostsIncreasingData 1-6")
-genGraph("HostsIncreasingData", columns, range(6, 16, 2), ["Hosts", "PerHost", "Tuples"], "Hosts", True, name="HostsIncreasingData 6-16")
+genGraph("NodesPerHostConstant", allPlusNetwork, [1] + list(range(2, 17, 2)), ["Hosts", "PerHost", "Tuples"], "PerHost",
+         colors=networkMixedColors, name="NodesPerHostConstantLong")
+genGraph("HostsIncreasingData", allPlusLocal, range(1, 7, 1), ["Hosts", "PerHost", "Tuples"], "Hosts", True,
+         name="HostsIncreasingData 1-6", colors=localMixedColors)
+genGraph("HostsIncreasingData", allPlusLocal, range(6, 16, 2), ["Hosts", "PerHost", "Tuples"], "Hosts", True,
+         name="HostsIncreasingData 6-16", colors=localMixedColors)
 genGraph("TuplesPerNode",
          ["LPHISTCOMP", "LPPART", "BPMEMALLOC", "BPBUILD", "BPPROBE"],
          [1000 * 1000, 5 * 1000 * 1000, 10*1000*1000, 15*1000*1000, 20*1000*1000],
          ["Hosts", "PerHost", "Tuples"],
          "Tuples",
          name="Tuples Per Node Local Processing",
-         nocache=False)
-genGraph("TuplesPerNode", columns, [1000, 10000, 100 * 1000, 1000 * 1000],
+         nocache=False,
+         colors=localColors)
+genGraph("TuplesPerNode", allPlusLocal, [1000, 10000, 100 * 1000, 1000 * 1000],
          ["Hosts", "PerHost", "Tuples"],
         "Tuples",
-         name="Tuples Small")
+         name="Tuples Small", colors=localMixedColors)
 
 genGraph("TuplesPerNode", columns, [1000 * 1000, 5 * 1000 * 1000, 10*1000*1000, 15*1000*1000, 20*1000*1000],
          ["Hosts", "PerHost", "Tuples"],
-         "Tuples")
+         "Tuples",
+         colors=defaultColors)
 genGraph("NodesPerHostIncreasing",
          columns,
          [1, 2, 4, 8, 16],
          ["Hosts", "PerHost", "Tuples"],
-         "PerHost")
+         "PerHost",
+         colors=defaultColors)
 
 genGraph("PackageSize", columns, [64, 128, 256, 512, 1024, 2048], ["Hosts", "PerHost", "Tuples", "packageSize"],
-         "packageSize")
-genGraph("HostsFixedData", columns, range(2, 16, 2), ["Hosts", "PerHost", "Tuples"], "Hosts", True)
-genGraph("HostsFixedData", ["LPHISTCOMP", "LPPART", "BPMEMALLOC", "BPBUILD", "BPPROBE"], range(2, 16, 2), ["Hosts", "PerHost", "Tuples"], "Hosts", True, name="HostsFixedData Local")
+         "packageSize", colors=defaultColors)
+genGraph("HostsFixedData", allPlusLocal, range(2, 16, 2), ["Hosts", "PerHost", "Tuples"], "Hosts", True, colors=localMixedColors)
+
+#genGraph("HostsFixedData", ["LPHISTCOMP", "LPPART", "BPMEMALLOC", "BPBUILD", "BPPROBE"], range(2, 16, 2), ["Hosts", "PerHost", "Tuples"], "Hosts", True, name="HostsFixedData Local")
 #
 
-genGraph("NetworkPart", columns, range(5, 11), ["Hosts", "PerHost", "Tuples", "NPart"], "NPart")
-genGraph("LocalPart", columns, range(5, 11), ["Hosts", "PerHost", "Tuples", "LPart"], "LPart")
+genGraph("NetworkPart", columns, range(5, 11), ["Hosts", "PerHost", "Tuples", "NPart"], "NPart", colors=defaultColors)
+genGraph("LocalPart", allPlusLocal, range(5, 11), ["Hosts", "PerHost", "Tuples", "LPart"], "LPart", colors=localMixedColors)
 
 genGraph("DataSkew", columns, [1.0, 2, 3, 4, 5],
-         ["Hosts", "PerHost", "Tuples", "ZipfSize", "ZipfFactor"], "ZipfFactor", maxBy="JTOTAL", normalize=False)
+         ["Hosts", "PerHost", "Tuples", "ZipfSize", "ZipfFactor"], "ZipfFactor", maxBy="JTOTAL", normalize=False, colors=defaultColors)
 
 genGraph("LocalPart",
-         ["LPHISTCOMP", "LPPART", "BPMEMALLOC", "BPBUILD", "BPPROBE"],
+         ["LPHISTCOMP", "PART", "BPMEMALLOC", "BPBUILD", "BPPROBE"],
          range(5, 11),
          ["Hosts", "PerHost", "Tuples", "LPart"],
          "LPart",
          name="Local Partitioning Local Processing",
-         nocache=False)
+         nocache=False,
+         colors=localColors)
 
 
 
