@@ -5,7 +5,14 @@ import matplotlib.cm as cm
 import numpy as np
 import matplotlib.pyplot as plt
 
-def plot_clustered_stacked(dfall, labels=None, title="multiple stacked bar plot",  H="//", colors: List = None, **kwargs):
+def plot_clustered_stacked(dfall,
+                           labels=None,
+                           title="multiple stacked bar plot",
+                           H="//",
+                           colors: List = None,
+                           legend: bool = True,
+                           ylabel: str = None,
+                           **kwargs):
     """Given a list of dataframes, with identical columns and index, create a clustered stacked bar plot. 
 labels is a list of the names of the dataframe, used for the legend
 title is a string for the title of the plot
@@ -14,7 +21,7 @@ H is the hatch used for identification of the different dataframe"""
     n_df = len(dfall)
     n_col = len(dfall[0].columns) 
     n_ind = len(dfall[0].index)
-    axe = plt.subplot(111)
+    axe: plt.Axes = plt.subplot(111)
     x = np.arange(1, n_col + 1)
     width = 0.35
 
@@ -52,14 +59,18 @@ H is the hatch used for identification of the different dataframe"""
     axe.set_xticks((np.arange(0, 2 * n_ind, 2) + 1 / float(n_df + 1)) / 2.)
     axe.set_xticklabels(dfall[0].index, rotation = 0)
     axe.set_title(title)
+    if ylabel is not None:
+        axe.set_ylabel(ylabel)
 
     # Add invisible data to add another legend
-    n=[]        
-    for i in range(n_df):
-        n.append(axe.bar(0, 0, color="gray", hatch=H * i))
 
-    l1 = axe.legend(h[n_col - 1::-1], l[n_col - 1::-1], loc=[1.01, 0.5])
-    if labels is not None:
-        l2 = plt.legend(n, labels, loc=[1.01, 0.1]) 
-    axe.add_artist(l1)
+    if legend:
+        n = []
+        for i in range(n_df):
+            n.append(axe.bar(0, 0, color="gray", hatch=H * i))
+        l1 = axe.legend(h[n_col - 1::-1], l[n_col - 1::-1], loc=[1.01, 0.25])
+        if labels is not None:
+            l2 = plt.legend(n[::-1], labels[::-1], loc=[1.01, 0.1])
+        axe.add_artist(l1)
+
     return axe
