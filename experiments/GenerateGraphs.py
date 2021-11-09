@@ -114,6 +114,7 @@ def genGraph(dir: str, colgroups: List, rows: List, varkeys: List[str] = ["Tuple
     cacheDF: pd.DataFrame = df.loc[df['mode'] == 'caching'].drop("mode", axis=1).set_index(filterBy)
     rindex(cacheDF.index, xlabel)
     dfs.append(cacheDF)
+    axe = None
     if nocache and cacheDF.size > 0:
         nocacheDF: pd.DataFrame = df.loc[df['mode'] == 'nocache'].drop("mode", axis=1).set_index(filterBy)
         rindex(nocacheDF.index, xlabel)
@@ -121,21 +122,41 @@ def genGraph(dir: str, colgroups: List, rows: List, varkeys: List[str] = ["Tuple
         plot_clustered_stacked(dfs, ["caching", "noncaching"], title="", colors=colors, legend=legend)
         legend=False
     elif not nocache:
-        cacheDF.plot(kind="bar", stacked=True, edgecolor="black", linewidth=0.3)
+        axe = cacheDF.plot(kind="bar", stacked=True, edgecolor="black", linewidth=0.3)
     else:
         nocacheDF: pd.DataFrame = df.loc[df['mode'] == 'nocache'].drop("mode", axis=1).set_index(filterBy)
         rindex(nocacheDF.index, xlabel)
-        nocacheDF.plot(kind="bar", stacked=True, edgecolor="black", linewidth=0.3)
+        axe = nocacheDF.plot(kind="bar", stacked=True, edgecolor="black", linewidth=0.3)
     # plt.yscale("log")
     # nocacheDF.plot(kind="bar", stacked=True)
     # plt.show()
     # cacheDF.plot(kind="bar", stacked=True)
+
+    drawingDf = df.drop(["mode", filterBy], axis=1)
+    cols = len(drawingDf.columns)
+    if axe is not None and colors is not None:
+        h, l = axe.get_legend_handles_labels()  # get the handles we want to modify
+        for i in range(0, cols, cols):  # len(h) = n_col * n_df
+            for j, pa in enumerate(h[i:i + cols]):
+                for rect in pa.patches:  # for each index
+                    rect.set_facecolor(colors[j])
+
     if legend:
-        plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+        h, l = axe.get_legend_handles_labels()  # get the handles we want to modify
+        l1 = axe.legend(h[::-1], l[::-1],
+                        loc=[1.01, 0.25],
+                        #bbox_to_anchor=(1.05, 1),
+                        #borderaxespad=0.)
+                        )
+        axe.add_artist(l1)
+        #plt.legend(loc="center left", bbox_to_anchor=(1, 0.3))
     plt.ylabel(ylabel)
     plt.xticks(rotation=0)
-    plt.tight_layout(pad=2)
-    plt.savefig("graphs/" + name + ".png")
+    if axe is not None:
+        axe.get_figure().savefig("graphs/" + name + ".png", bbox_extra_artists=(l1,), bbox_inches="tight")
+    else:
+        plt.tight_layout(pad=2)
+        plt.savefig("graphs/" + name + ".png")
     nativeDF: pd.DataFrame = df.loc[df['mode'] == "native"].drop(["mode"], axis=1)
     if "SUNSEAL" in nativeDF.columns:
         nativeDF.drop(["SUNSEAL"], axis=1, inplace=True)
@@ -181,6 +202,9 @@ networkMixedColors = [defaultColors[0]] + networkColors + defaultColors[2:]
 localMixedColors = defaultColors[:2] + localColors + defaultColors[3:]
 allMixedColors = [defaultColors[0]] + networkColors + localColors + defaultColors[3:]
 
+genGraph("PackageSize", allColumns, [64, 128, 256, 512, 1024, 2048], ["Hosts", "PerHost", "Tuples", "packageSize"],
+         "packageSize", colors=allMixedColors)
+
 #genGraph("NodesPerHostConstant", allPlusNetwork, [1, 2, 4, 8, 16], ["Hosts", "PerHost", "Tuples"], "PerHost", colors=mixedColors)
 genGraph("NodesPerHostConstant", allPlusNetwork, [1] + list(range(2, 17, 2)), ["Hosts", "PerHost", "Tuples"], "PerHost",
          colors=networkMixedColors, name="NodesPerHostConstantLong")
@@ -218,8 +242,6 @@ genGraph("NodesPerHostIncreasing",
          "PerHost",
          colors=defaultColors)
 
-genGraph("PackageSize", columns, [64, 128, 256, 512, 1024, 2048], ["Hosts", "PerHost", "Tuples", "packageSize"],
-         "packageSize", colors=defaultColors)
 genGraph("HostsFixedData", allPlusLocal, range(2, 16, 2), ["Hosts", "PerHost", "Tuples"], "Hosts", True, colors=localMixedColors)
 
 #genGraph("HostsFixedData", ["LPHISTCOMP", "LPPART", "BPMEMALLOC", "BPBUILD", "BPPROBE"], range(2, 16, 2), ["Hosts", "PerHost", "Tuples"], "Hosts", True, name="HostsFixedData Local")
@@ -230,8 +252,8 @@ genGraph("NetworkPart", columns, range(5, 11), ["Hosts", "PerHost", "Tuples", "N
 genGraph("LocalPart", allPlusLocal, range(5, 11), ["Hosts", "PerHost", "Tuples", "LPart"], "LPart", colors=localMixedColors,
          ylabel="ns/Tuple", yfactor=1000)
 
-genGraph("DataSkew", columns, [1.0, 2, 3, 4, 5],
-         ["Hosts", "PerHost", "Tuples", "ZipfSize", "ZipfFactor"], "ZipfFactor", maxBy="JTOTAL", normalize=False, colors=defaultColors)
+genGraph("DataSkew", allColumns, [1.0, 2, 3, 4, 5],
+         ["Hosts", "PerHost", "Tuples", "ZipfSize", "ZipfFactor"], "ZipfFactor", maxBy="JTOTAL", normalize=False, colors=allMixedColors)
 
 genGraph("LocalPart",
          ["LPHISTCOMP", "PART", "BPMEMALLOC", "BPBUILD", "BPPROBE"],
