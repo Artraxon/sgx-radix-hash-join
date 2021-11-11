@@ -97,9 +97,9 @@ def genGraph(dir: str, colgroups: List, rows: List, varkeys: List[str] = ["Tuple
         for column in cols:
             df[column] = df[column] / (df['Tuples'] * df["Hosts"] * df["PerHost"])
     df[filterBy] = df[filterBy] * xfactor
-    df.set_index(filterBy)
+    df.set_index(["mode", filterBy], inplace=True)
     for column in df.columns:
-        if column not in cols + ["mode", filterBy]:
+        if column not in cols:
             df.drop(column, axis=1, inplace=True)
     for group in colgroups:
         df[group[0]] = df[group[1]].sum(axis=1)
@@ -107,16 +107,22 @@ def genGraph(dir: str, colgroups: List, rows: List, varkeys: List[str] = ["Tuple
         df.drop(toDrop, axis=1, inplace=True)
     for group in colgroups:
         if len(group) > 2:
-            df[group[2]] -= df[group[0]]
+            idxs = []
+            if "caching" in df.index:
+                idxs.append("caching")
+            if "native" in df.index:
+                idxs.append("native")
+            df.loc[idxs][group[2]] -= df[group[0]]
 
-    df = df[["mode", filterBy] + [group[0] for group in colgroups]]
+    df = df[[group[0] for group in colgroups]]
     dfs = []
-    cacheDF: pd.DataFrame = df.loc[df['mode'] == 'caching'].drop("mode", axis=1).set_index(filterBy)
-    rindex(cacheDF.index, xlabel)
-    dfs.append(cacheDF)
+    if 'caching' in df.index:
+        cacheDF: pd.DataFrame = df.loc['caching']#.drop("mode", axis=1)#.set_index(filterBy)
+        rindex(cacheDF.index, xlabel)
+        dfs.append(cacheDF)
     axe = None
-    if nocache and cacheDF.size > 0:
-        nocacheDF: pd.DataFrame = df.loc[df['mode'] == 'nocache'].drop("mode", axis=1).set_index(filterBy)
+    if nocache and 'caching' in df.index:
+        nocacheDF: pd.DataFrame = df.loc['nocache']#.drop("mode", axis=1)#.set_index(filterBy)
         rindex(nocacheDF.index, xlabel)
         dfs.append(nocacheDF)
         plot_clustered_stacked(dfs, ["caching", "noncaching"], title="", colors=colors, legend=legend)
@@ -124,7 +130,7 @@ def genGraph(dir: str, colgroups: List, rows: List, varkeys: List[str] = ["Tuple
     elif not nocache:
         axe = cacheDF.plot(kind="bar", stacked=True, edgecolor="black", linewidth=0.3)
     else:
-        nocacheDF: pd.DataFrame = df.loc[df['mode'] == 'nocache'].drop("mode", axis=1).set_index(filterBy)
+        nocacheDF: pd.DataFrame = df.loc['nocache']#.drop("mode", axis=1)#.set_index(filterBy)
         rindex(nocacheDF.index, xlabel)
         axe = nocacheDF.plot(kind="bar", stacked=True, edgecolor="black", linewidth=0.3)
     # plt.yscale("log")
@@ -132,7 +138,7 @@ def genGraph(dir: str, colgroups: List, rows: List, varkeys: List[str] = ["Tuple
     # plt.show()
     # cacheDF.plot(kind="bar", stacked=True)
 
-    drawingDf = df.drop(["mode", filterBy], axis=1)
+    drawingDf = df.copy()# df.drop(["mode"], axis=1)
     cols = len(drawingDf.columns)
     if axe is not None and colors is not None:
         h, l = axe.get_legend_handles_labels()  # get the handles we want to modify
@@ -157,17 +163,17 @@ def genGraph(dir: str, colgroups: List, rows: List, varkeys: List[str] = ["Tuple
     else:
         plt.tight_layout(pad=2)
         plt.savefig("graphs/" + name + ".png")
-    nativeDF: pd.DataFrame = df.loc[df['mode'] == "native"].drop(["mode"], axis=1)
-    if "SUNSEAL" in nativeDF.columns:
-        nativeDF.drop(["SUNSEAL"], axis=1, inplace=True)
-    if not yscaleSecure:
-        groupedCols = [g[0] for g in colgroups if g[0] != "SUNSEAL"]
-        nativeDF[groupedCols] = nativeDF[groupedCols] * yfactor
-    nativeDF.set_index(filterBy, inplace=True)
-    if nativeDF.size > 0:
+    #nativeDF.set_index(filterBy, inplace=True)
+    if 'native' in df.index:
+        nativeDF: pd.DataFrame = df.loc["native"]  # .drop(["mode"], axis=1)
+        if "SUNSEAL" in nativeDF.columns:
+            nativeDF.drop(["SUNSEAL"], axis=1, inplace=True)
+        if not yscaleSecure:
+            groupedCols = [g[0] for g in colgroups if g[0] != "SUNSEAL"]
+            nativeDF[groupedCols] = nativeDF[groupedCols] * yfactor
         if colors is not None:
             #colors = colors[:6] + colors[7:]
-            nativeDF[nativeDF < 0] = 0
+            #nativeDF[nativeDF < 0] = 0
             rindex(nativeDF.index, xlabel)
             axe: plt.Axes = nativeDF.plot(kind="bar", stacked=True, edgecolor="black", linewidth=0.3, legend=None)
             axe.set_ylabel(nativeYLabel)
@@ -202,8 +208,10 @@ networkMixedColors = [defaultColors[0]] + networkColors + defaultColors[2:]
 localMixedColors = defaultColors[:2] + localColors + defaultColors[3:]
 allMixedColors = [defaultColors[0]] + networkColors + localColors + defaultColors[3:]
 
-genGraph("PackageSize", allColumns, [64, 128, 256, 512, 1024, 2048], ["Hosts", "PerHost", "Tuples", "packageSize"],
-         "packageSize", colors=allMixedColors)
+genGraph("HostsFixedData", allColumns, range(2, 16, 2), ["Hosts", "PerHost", "Tuples"], "Hosts", True, colors=allMixedColors)
+
+genGraph("PackageSize", allPlusLocal, [64, 128, 256, 512, 1024, 2048], ["Hosts", "PerHost", "Tuples", "packageSize"],
+         "packageSize", colors=localMixedColors)
 
 #genGraph("NodesPerHostConstant", allPlusNetwork, [1, 2, 4, 8, 16], ["Hosts", "PerHost", "Tuples"], "PerHost", colors=mixedColors)
 genGraph("NodesPerHostConstant", allPlusNetwork, [1] + list(range(2, 17, 2)), ["Hosts", "PerHost", "Tuples"], "PerHost",
@@ -242,7 +250,6 @@ genGraph("NodesPerHostIncreasing",
          "PerHost",
          colors=defaultColors)
 
-genGraph("HostsFixedData", allPlusLocal, range(2, 16, 2), ["Hosts", "PerHost", "Tuples"], "Hosts", True, colors=localMixedColors)
 
 #genGraph("HostsFixedData", ["LPHISTCOMP", "LPPART", "BPMEMALLOC", "BPBUILD", "BPPROBE"], range(2, 16, 2), ["Hosts", "PerHost", "Tuples"], "Hosts", True, name="HostsFixedData Local")
 #
