@@ -208,10 +208,38 @@ networkMixedColors = [defaultColors[0]] + networkColors + defaultColors[2:]
 localMixedColors = defaultColors[:2] + localColors + defaultColors[3:]
 allMixedColors = [defaultColors[0]] + networkColors + localColors + defaultColors[3:]
 
+genGraph("TuplesPerNode", columns + localColumns + networkColumns, [1000 * 1000, 5 * 1000 * 1000, 10*1000*1000, 15*1000*1000, 20*1000*1000, 25*1000*1000, 30*1000*1000,
+                                                                    35*1000*1000, 40*1000*1000],
+         ["Hosts", "PerHost", "Tuples"],
+         "Tuples",
+         colors=defaultColors + localColors + networkColors,
+         xfactor=1/1000000,
+         xlabel="Million Tuples",
+         name="Test Tuples per node")
+
+genGraph("TuplesPerNode", allColumns, [1000 * 1000, 5 * 1000 * 1000, 10*1000*1000, 15*1000*1000, 20*1000*1000, 25*1000*1000, 30*1000*1000,
+                                                                    35*1000*1000, 40*1000*1000],
+         ["Hosts", "PerHost", "Tuples"],
+         "Tuples",
+         colors=allMixedColors,
+         xfactor=1/1000000,
+         xlabel="Million Tuples",
+         name="Tuples Per Node all phases")
+
+genGraph("TuplesPerNode", columns, [1000 * 1000, 5 * 1000 * 1000, 10*1000*1000, 15*1000*1000, 20*1000*1000],
+         ["Hosts", "PerHost", "Tuples"],
+         "Tuples",
+         colors=defaultColors,
+         xfactor=1/1000000,
+         xlabel="Million Tuples")
+
 genGraph("HostsFixedData", allColumns, range(2, 16, 2), ["Hosts", "PerHost", "Tuples"], "Hosts", True, colors=allMixedColors)
 
-genGraph("PackageSize", allPlusLocal, [64, 128, 256, 512, 1024, 2048], ["Hosts", "PerHost", "Tuples", "packageSize"],
-         "packageSize", colors=localMixedColors)
+genGraph("PackageSize", allPlusNetwork, [64, 128, 256, 512, 1024, 2048], ["Hosts", "PerHost", "Tuples", "packageSize"],
+         "packageSize", colors=networkMixedColors,
+         xlabel="Package Size in in Tuples/64",
+         yfactor=1000,
+         ylabel="ns/Tuple")
 
 #genGraph("NodesPerHostConstant", allPlusNetwork, [1, 2, 4, 8, 16], ["Hosts", "PerHost", "Tuples"], "PerHost", colors=mixedColors)
 genGraph("NodesPerHostConstant", allPlusNetwork, [1] + list(range(2, 17, 2)), ["Hosts", "PerHost", "Tuples"], "PerHost",
@@ -237,18 +265,13 @@ genGraph("TuplesPerNode", allPlusLocal, [1000, 10000, 100 * 1000, 1000 * 1000],
         "Tuples",
          name="Tuples Small", colors=localMixedColors)
 
-genGraph("TuplesPerNode", columns, [1000 * 1000, 5 * 1000 * 1000, 10*1000*1000, 15*1000*1000, 20*1000*1000],
-         ["Hosts", "PerHost", "Tuples"],
-         "Tuples",
-         colors=defaultColors,
-         xfactor=1/1000000,
-         xlabel="Million Tuples")
+
 genGraph("NodesPerHostIncreasing",
-         columns,
+         allColumns,
          [1, 2, 4, 8, 16],
          ["Hosts", "PerHost", "Tuples"],
          "PerHost",
-         colors=defaultColors)
+         colors=allMixedColors)
 
 
 #genGraph("HostsFixedData", ["LPHISTCOMP", "LPPART", "BPMEMALLOC", "BPBUILD", "BPPROBE"], range(2, 16, 2), ["Hosts", "PerHost", "Tuples"], "Hosts", True, name="HostsFixedData Local")
