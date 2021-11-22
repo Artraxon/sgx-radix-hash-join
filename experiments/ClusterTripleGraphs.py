@@ -26,7 +26,7 @@ H is the hatch used for identification of the different dataframe"""
     n_ind = len(dfall[0].index)
     axe: plt.Axes = plt.subplot(subplotParam)
     x = np.arange(1, n_col + 1)
-    width = 0.35
+    width = 0.2
 
     axe = dfall[0].plot(kind="bar",
                         linewidth=0.3,
@@ -34,7 +34,7 @@ H is the hatch used for identification of the different dataframe"""
                         ax=axe,
                         legend=False,
                         grid=False,
-                        position=-width,
+                        position=-0.5,
                         edgecolor="black",
                         **kwargs)  # make bar plots
 
@@ -44,7 +44,17 @@ H is the hatch used for identification of the different dataframe"""
                         ax=axe,
                         legend=False,
                         grid=False,
-                        position=width,
+                        position=0,
+                        edgecolor="black",
+                        **kwargs)  # make bar plots
+
+    axe = dfall[2].plot(kind="bar",
+                        linewidth=0.3,
+                        stacked=True,
+                        ax=axe,
+                        legend=False,
+                        grid=False,
+                        position=0.5,
                         edgecolor="black",
                         **kwargs)  # make bar plots
 
@@ -67,7 +77,7 @@ H is the hatch used for identification of the different dataframe"""
 
     # Add invisible data to add another legend
 
-    axe.figure.set_size_inches(5, 5)
+    axe.figure.set_size_inches(12, 5)
 
     if legend:
         n = []

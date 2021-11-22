@@ -1,52 +1,12 @@
 import os
 import shutil
-import re
 from typing import List
 from ClusterGraphs import plot_clustered_stacked
+from GeneratePerNodeGraphs import genGraph as genGraphPerNode
+import GenerateSplitGraphs as gsg
 import matplotlib.pyplot as plt
 import pandas as pd
-
-
-def loadData(identifier: str, keys: List[str], varkeys: List[str], maxBy: str = None) -> pd.DataFrame:
-    if maxBy is not None and maxBy not in keys:
-        keys.append(maxBy)
-    df = pd.DataFrame(columns=["mode"] + varkeys + keys)
-    for configuration in next(os.walk(identifier))[1]:
-        mode = configuration.split("-")[-1]
-        varparams = re.split(",|--", configuration)[-len(varkeys):]
-        section = 1 if len(varparams) >= 3 else 0
-        varparams[-1] = varparams[-1].split("-")[section]
-        varparams = [it.split("=")[1] if len(it.split("=")) > 1 else it for it in varparams]
-        varparams = varparams[0].split("x") + varparams[1:]
-        varmap = dict(zip(varkeys, varparams))
-        varmap["mode"] = mode
-        tempdfs: List[List[pd.DataFrame]] = []
-        for run in next(os.walk(identifier + "/" + configuration))[1]:
-            nodes: List[pd.DataFrame] = []
-            for file in next(os.walk(identifier + "/" + configuration + "/" + run))[2]:
-                if file.endswith("perf"):
-                    with open(identifier + "/" + configuration + "/" + run + "/" + file) as f:
-                        interestingLines = {}
-                        for line in f:
-                            for key in keys:
-                                if line.startswith(key):
-                                    splitted = line.split()
-                                    interestingLines[splitted[0]] = [float(splitted[1])]
-                        nodes.append(pd.DataFrame(interestingLines, index=[file.split(".")[0]]))
-            tempdfs.append(nodes)
-        result: pd.Series
-        totalResults: pd.DataFrame
-        if maxBy is None:
-            totalResults = pd.concat([frame for sublist in tempdfs for frame in sublist])
-        else:
-            files = [pd.concat(files) for files in tempdfs]
-            maxValues = [frame.loc[frame[maxBy].idxmax()] for frame in files]
-            totalResults = pd.DataFrame(maxValues)
-        result = totalResults.mean()
-        ids = pd.Series(varmap)
-        df = df.append(pd.DataFrame([ids.append(result)]))
-    return df
-
+from LoadData import loadData
 
 dirs = ["TuplesPerNode", "NodesPerHostConstant", "NodesPerHostIncreasing", "HostsFixedData", "NetworkPart", "LocalPart",
         "PackageSize", "DataSkew"]
@@ -58,6 +18,17 @@ os.mkdir("graphs")
 def rindex(index, label):
     if label is not None:
         index.rename(label, inplace=True)
+
+def set_size(w,h, ax=None):
+    """ w, h: width, height in inches """
+    if not ax: ax=plt.gca()
+    l = ax.figure.subplotpars.left
+    r = ax.figure.subplotpars.right
+    t = ax.figure.subplotpars.top
+    b = ax.figure.subplotpars.bottom
+    figw = float(w)/(r-l)
+    figh = float(h)/(t-b)
+    ax.figure.set_size_inches(figw, figh)
 
 def genGraph(dir: str, colgroups: List, rows: List, varkeys: List[str] = ["Tuples"], filterBy: str = "Tuples",
              nocache: bool = True,
@@ -116,6 +87,7 @@ def genGraph(dir: str, colgroups: List, rows: List, varkeys: List[str] = ["Tuple
 
     df = df[[group[0] for group in colgroups]]
     dfs = []
+    plt.figure(figsize=(10,7))
     if 'caching' in df.index:
         cacheDF: pd.DataFrame = df.loc['caching']#.drop("mode", axis=1)#.set_index(filterBy)
         rindex(cacheDF.index, xlabel)
@@ -150,7 +122,9 @@ def genGraph(dir: str, colgroups: List, rows: List, varkeys: List[str] = ["Tuple
     if legend:
         h, l = axe.get_legend_handles_labels()  # get the handles we want to modify
         l1 = axe.legend(h[::-1], l[::-1],
-                        loc=[1.01, 0.25],
+                        bbox_to_anchor=(0.5, 1.00),
+                        loc="lower center",
+                        ncol=4
                         #bbox_to_anchor=(1.05, 1),
                         #borderaxespad=0.)
                         )
@@ -159,9 +133,13 @@ def genGraph(dir: str, colgroups: List, rows: List, varkeys: List[str] = ["Tuple
     plt.ylabel(ylabel)
     plt.xticks(rotation=0)
     if axe is not None:
+        #plt.tight_layout(pad=1)
+        plt.tight_layout(rect=(0,0,1,0.75))
         axe.get_figure().savefig("graphs/" + name + ".png", bbox_extra_artists=(l1,), bbox_inches="tight")
     else:
-        plt.tight_layout(pad=2)
+        #plt.tight_layout(pad=1)
+        plt.tight_layout(rect=(0,0,1,0.75))
+        #plt.tight_layout("")
         plt.savefig("graphs/" + name + ".png")
     #nativeDF.set_index(filterBy, inplace=True)
     if 'native' in df.index:
@@ -186,8 +164,10 @@ def genGraph(dir: str, colgroups: List, rows: List, varkeys: List[str] = ["Tuple
         else:
             nativeDF.plot(kind="bar", stacked=True, edgecolor="black", linewidth=0.3, legend=None)
         #plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+        axe.figure.set_size_inches(5, 5)
         plt.xticks(rotation=0)
-        plt.tight_layout(pad=2)
+        plt.tight_layout(rect=(0,0,1,0.75))
+        #plt.tight_layout(pad=2)
         plt.savefig("graphs/" + name + "-native.png")
     print("generated " + name)
     plt.clf()
@@ -208,32 +188,74 @@ networkMixedColors = [defaultColors[0]] + networkColors + defaultColors[2:]
 localMixedColors = defaultColors[:2] + localColors + defaultColors[3:]
 allMixedColors = [defaultColors[0]] + networkColors + localColors + defaultColors[3:]
 
-genGraph("TuplesPerNode", columns + localColumns + networkColumns, [1000 * 1000, 5 * 1000 * 1000, 10*1000*1000, 15*1000*1000, 20*1000*1000, 25*1000*1000, 30*1000*1000,
-                                                                    35*1000*1000, 40*1000*1000],
-         ["Hosts", "PerHost", "Tuples"],
-         "Tuples",
-         colors=defaultColors + localColors + networkColors,
-         xfactor=1/1000000,
-         xlabel="Million Tuples",
-         name="Test Tuples per node")
+genGraphPerNode("DataSkew", allColumns, [1.0, 2],
+         ["Hosts", "PerHost", "Tuples", "ZipfSize", "ZipfFactor"], "ZipfFactor", maxBy="JTOTAL", normalize=False, colors=allMixedColors,
+         selection=["nocache,uniform","nocache,1","nocache,2","caching,1","caching,2","caching,uniform"],
+         yfactor=1/1000000, ylabel="Runtime in seconds")
 
-genGraph("TuplesPerNode", allColumns, [1000 * 1000, 5 * 1000 * 1000, 10*1000*1000, 15*1000*1000, 20*1000*1000, 25*1000*1000, 30*1000*1000,
-                                                                    35*1000*1000, 40*1000*1000],
+genGraph("TuplesPerNode", allColumns, [1000 * 1000, 5 * 1000 * 1000, 10*1000*1000, 15*1000*1000,
+                                       20*1000*1000, 30*1000*1000, 40*1000*1000, 50*1000*1000, 60*1000*1000],
          ["Hosts", "PerHost", "Tuples"],
          "Tuples",
          colors=allMixedColors,
          xfactor=1/1000000,
-         xlabel="Million Tuples",
-         name="Tuples Per Node all phases")
+         xlabel="Million tuples per node",
+         yfactor=1000,
+         ylabel="ns/Tuple",
+         name="Tuples per node")
 
-genGraph("TuplesPerNode", columns, [1000 * 1000, 5 * 1000 * 1000, 10*1000*1000, 15*1000*1000, 20*1000*1000],
+genGraph("NetworkPart", allColumns, range(5, 11), ["Hosts", "PerHost", "Tuples", "NPart"], "NPart", colors=allMixedColors,
+         ylabel="ns/Tuple", yfactor=1000,
+         xlabel="Radix Bits")
+genGraph("NodesPerHostIncreasing",
+         allColumns,
+         [1] + list(range(2, 13, 2)),
+         ["Hosts", "PerHost", "Tuples"],
+         "PerHost",
+         colors=allMixedColors,
+         yfactor=1000,
+         ylabel="ns/Tuple")
+
+gsg.genGraphSplit("NodesPerHostIncreasing", "../oldArtifacts/NodesPerHostIncreasing", allPlusNetwork, list(range(14, 17, 2)), ["Hosts", "PerHost", "Tuples"], "PerHost",
+                  colors=networkMixedColors, name="NodesPerHostIncreasingExtreme")
+
+genGraph("NodesPerHostConstant", allColumns, [1] + list(range(2, 13, 2)), ["Hosts", "PerHost", "Tuples"], "PerHost",
+         colors=allMixedColors, name="NodesPerHostConstantLong", yscaleSecure=True, ylabel="ns/Tuple", yfactor=1000)
+
+
+genGraph("TuplesPerNode", allColumns, [100 * 1000, 1000 * 1000],
          ["Hosts", "PerHost", "Tuples"],
          "Tuples",
-         colors=defaultColors,
-         xfactor=1/1000000,
-         xlabel="Million Tuples")
+         name="Tuples Small", colors=allMixedColors)
 
-genGraph("HostsFixedData", allColumns, range(2, 16, 2), ["Hosts", "PerHost", "Tuples"], "Hosts", True, colors=allMixedColors)
+
+
+genGraph("HostsIncreasingData", allColumns, range(1, 6, 1), ["Hosts", "PerHost", "Tuples"], "Hosts", True,
+         name="HostsIncreasingData 1-6", colors=allMixedColors, legend=False, yfactor=1000, nativeYLabel="ns/Tuple", yscaleSecure=False)
+
+genGraph("HostsIncreasingData", allColumns, range(5, 16, 2), ["Hosts", "PerHost", "Tuples"], "Hosts", True,
+         name="HostsIncreasingData 6-16", colors=allMixedColors, yfactor=1000, nativeYLabel="ns/Tuple", yscaleSecure=True)
+
+genGraph("HostsFixedData", allColumns, range(2, 16, 2), ["Hosts", "PerHost", "Tuples"], "Hosts", True, colors=allMixedColors,
+         yfactor=1000, ylabel="ns/Tuple", yscaleSecure=True)
+
+
+gsg.genGraphSplit("NodesPerHostConstant", "../oldArtifacts/NodesPerHostConstant", allPlusNetwork, list(range(14, 17, 2)), ["Hosts", "PerHost", "Tuples"], "PerHost",
+                  colors=networkMixedColors, name="NodesPerHostConstantExtreme")
+
+genGraph("NodesPerHostConstant", localColumns, [1] + list(range(2, 13, 2)), ["Hosts", "PerHost", "Tuples"], "PerHost",
+         colors=localColors, name="NodesPerHostConstantLocal", yfactor=1000, ylabel="ns/Tuple", yscaleSecure=True)
+
+genGraph("TuplesPerNode",
+         ["LPHISTCOMP", "LPPART", "BPMEMALLOC", "BPBUILD", "BPPROBE"],
+         [1000 * 1000, 5 * 1000 * 1000, 10*1000*1000, 15*1000*1000
+             #, 20*1000*1000
+             ],
+         ["Hosts", "PerHost", "Tuples"],
+         "Tuples",
+         name="Tuples Per Node Local Processing",
+         nocache=False,
+         colors=localColors)
 
 genGraph("PackageSize", allPlusNetwork, [64, 128, 256, 512, 1024, 2048], ["Hosts", "PerHost", "Tuples", "packageSize"],
          "packageSize", colors=networkMixedColors,
@@ -241,49 +263,9 @@ genGraph("PackageSize", allPlusNetwork, [64, 128, 256, 512, 1024, 2048], ["Hosts
          yfactor=1000,
          ylabel="ns/Tuple")
 
-#genGraph("NodesPerHostConstant", allPlusNetwork, [1, 2, 4, 8, 16], ["Hosts", "PerHost", "Tuples"], "PerHost", colors=mixedColors)
-genGraph("NodesPerHostConstant", allPlusNetwork, [1] + list(range(2, 17, 2)), ["Hosts", "PerHost", "Tuples"], "PerHost",
-         colors=networkMixedColors, name="NodesPerHostConstantLong")
-#genGraph("HostsIncreasingData", allPlusLocal, range(1, 7, 1), ["Hosts", "PerHost", "Tuples"], "Hosts", True,
-#         name="HostsIncreasingData 1-6", colors=localMixedColors, legend=False)
-
-genGraph("HostsIncreasingData", allColumns, range(1, 7, 1), ["Hosts", "PerHost", "Tuples"], "Hosts", True,
-         name="HostsIncreasingData 1-6", colors=allMixedColors, legend=False, yfactor=1000, nativeYLabel="ns/Tuple", yscaleSecure=False)
-
-genGraph("HostsIncreasingData", allColumns, range(6, 16, 2), ["Hosts", "PerHost", "Tuples"], "Hosts", True,
-         name="HostsIncreasingData 6-16", colors=allMixedColors, yfactor=1000, nativeYLabel="ns/Tuple", yscaleSecure=False)
-genGraph("TuplesPerNode",
-         ["LPHISTCOMP", "LPPART", "BPMEMALLOC", "BPBUILD", "BPPROBE"],
-         [1000 * 1000, 5 * 1000 * 1000, 10*1000*1000, 15*1000*1000, 20*1000*1000],
-         ["Hosts", "PerHost", "Tuples"],
-         "Tuples",
-         name="Tuples Per Node Local Processing",
-         nocache=False,
-         colors=localColors)
-genGraph("TuplesPerNode", allPlusLocal, [1000, 10000, 100 * 1000, 1000 * 1000],
-         ["Hosts", "PerHost", "Tuples"],
-        "Tuples",
-         name="Tuples Small", colors=localMixedColors)
-
-
-genGraph("NodesPerHostIncreasing",
-         allColumns,
-         [1, 2, 4, 8, 16],
-         ["Hosts", "PerHost", "Tuples"],
-         "PerHost",
-         colors=allMixedColors)
-
-
-#genGraph("HostsFixedData", ["LPHISTCOMP", "LPPART", "BPMEMALLOC", "BPBUILD", "BPPROBE"], range(2, 16, 2), ["Hosts", "PerHost", "Tuples"], "Hosts", True, name="HostsFixedData Local")
-#
-
-genGraph("NetworkPart", columns, range(5, 11), ["Hosts", "PerHost", "Tuples", "NPart"], "NPart", colors=defaultColors,
-         ylabel="ns/Tuple", yfactor=1000)
 genGraph("LocalPart", allPlusLocal, range(5, 11), ["Hosts", "PerHost", "Tuples", "LPart"], "LPart", colors=localMixedColors,
          ylabel="ns/Tuple", yfactor=1000)
 
-genGraph("DataSkew", allColumns, [1.0, 2, 3, 4, 5],
-         ["Hosts", "PerHost", "Tuples", "ZipfSize", "ZipfFactor"], "ZipfFactor", maxBy="JTOTAL", normalize=False, colors=allMixedColors)
 
 genGraph("LocalPart",
          ["LPHISTCOMP", "PART", "BPMEMALLOC", "BPBUILD", "BPPROBE"],
@@ -293,6 +275,18 @@ genGraph("LocalPart",
          name="Local Partitioning Local Processing",
          nocache=False,
          colors=localColors)
+
+#genGraph("NodesPerHostConstant", allPlusNetwork, [1, 2, 4, 8, 16], ["Hosts", "PerHost", "Tuples"], "PerHost", colors=mixedColors)
+#genGraph("HostsIncreasingData", allPlusLocal, range(1, 7, 1), ["Hosts", "PerHost", "Tuples"], "Hosts", True,
+#         name="HostsIncreasingData 1-6", colors=localMixedColors, legend=False)
+
+
+
+
+
+#genGraph("HostsFixedData", ["LPHISTCOMP", "LPPART", "BPMEMALLOC", "BPBUILD", "BPPROBE"], range(2, 16, 2), ["Hosts", "PerHost", "Tuples"], "Hosts", True, name="HostsFixedData Local")
+#
+
 
 
 
