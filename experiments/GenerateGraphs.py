@@ -188,10 +188,18 @@ networkMixedColors = [defaultColors[0]] + networkColors + defaultColors[2:]
 localMixedColors = defaultColors[:2] + localColors + defaultColors[3:]
 allMixedColors = [defaultColors[0]] + networkColors + localColors + defaultColors[3:]
 
+gsg.genGraphSplit("NodesPerHostIncreasing", "../oldArtifacts/NodesPerHostIncreasing", allPlusNetwork, list(range(14, 17, 2)), ["Hosts", "PerHost", "Tuples"], "PerHost",
+                  colors=networkMixedColors, name="NodesPerHostIncreasingExtreme",
+                  xlabel="Nodes per Host")
+
+genGraph("LocalPart", allPlusLocal, range(5, 11), ["Hosts", "PerHost", "Tuples", "LPart"], "LPart", colors=localMixedColors,
+         ylabel="ns/Tuple", yfactor=1000, xlabel="radix bits")
+genGraph("LocalPart", allColumns, range(5, 11), ["Hosts", "PerHost", "Tuples", "LPart"], "LPart", colors=allMixedColors,
+         ylabel="ns/Tuple", yfactor=1000, name="LocalPartAllColumns")
 genGraphPerNode("DataSkew", allColumns, [1.0, 2],
          ["Hosts", "PerHost", "Tuples", "ZipfSize", "ZipfFactor"], "ZipfFactor", maxBy="JTOTAL", normalize=False, colors=allMixedColors,
          selection=["nocache,uniform","nocache,1","nocache,2","caching,1","caching,2","caching,uniform"],
-         yfactor=1/1000000, ylabel="Runtime in seconds")
+         yfactor=1/1000000, ylabel="Runtime in seconds", xlabel="Node")
 
 genGraph("TuplesPerNode", allColumns, [1000 * 1000, 5 * 1000 * 1000, 10*1000*1000, 15*1000*1000,
                                        20*1000*1000, 30*1000*1000, 40*1000*1000, 50*1000*1000, 60*1000*1000],
@@ -199,10 +207,11 @@ genGraph("TuplesPerNode", allColumns, [1000 * 1000, 5 * 1000 * 1000, 10*1000*100
          "Tuples",
          colors=allMixedColors,
          xfactor=1/1000000,
-         xlabel="Million tuples per node",
+         xlabel="number of tuples per node [M]",
          yfactor=1000,
          ylabel="ns/Tuple",
          name="Tuples per node")
+
 
 genGraph("NetworkPart", allColumns, range(5, 11), ["Hosts", "PerHost", "Tuples", "NPart"], "NPart", colors=allMixedColors,
          ylabel="ns/Tuple", yfactor=1000,
@@ -214,13 +223,13 @@ genGraph("NodesPerHostIncreasing",
          "PerHost",
          colors=allMixedColors,
          yfactor=1000,
-         ylabel="ns/Tuple")
+         ylabel="ns/Tuple",
+         xlabel="Nodes per Host")
 
-gsg.genGraphSplit("NodesPerHostIncreasing", "../oldArtifacts/NodesPerHostIncreasing", allPlusNetwork, list(range(14, 17, 2)), ["Hosts", "PerHost", "Tuples"], "PerHost",
-                  colors=networkMixedColors, name="NodesPerHostIncreasingExtreme")
 
 genGraph("NodesPerHostConstant", allColumns, [1] + list(range(2, 13, 2)), ["Hosts", "PerHost", "Tuples"], "PerHost",
-         colors=allMixedColors, name="NodesPerHostConstantLong", yscaleSecure=True, ylabel="ns/Tuple", yfactor=1000)
+         colors=allMixedColors, name="NodesPerHostConstantLong", yscaleSecure=True, ylabel="ns/Tuple", yfactor=1000,
+         xlabel="Nodes per Host")
 
 
 genGraph("TuplesPerNode", allColumns, [100 * 1000, 1000 * 1000],
@@ -241,10 +250,12 @@ genGraph("HostsFixedData", allColumns, range(2, 16, 2), ["Hosts", "PerHost", "Tu
 
 
 gsg.genGraphSplit("NodesPerHostConstant", "../oldArtifacts/NodesPerHostConstant", allPlusNetwork, list(range(14, 17, 2)), ["Hosts", "PerHost", "Tuples"], "PerHost",
-                  colors=networkMixedColors, name="NodesPerHostConstantExtreme")
+                  colors=networkMixedColors, name="NodesPerHostConstantExtreme",
+                  xlabel="Nodes per Host")
 
 genGraph("NodesPerHostConstant", localColumns, [1] + list(range(2, 13, 2)), ["Hosts", "PerHost", "Tuples"], "PerHost",
-         colors=localColors, name="NodesPerHostConstantLocal", yfactor=1000, ylabel="ns/Tuple", yscaleSecure=True)
+         colors=localColors, name="NodesPerHostConstantLocal", yfactor=1000, ylabel="ns/Tuple", yscaleSecure=True,
+         xlabel="Nodes per Host")
 
 genGraph("TuplesPerNode",
          ["LPHISTCOMP", "LPPART", "BPMEMALLOC", "BPBUILD", "BPPROBE"],
@@ -259,12 +270,10 @@ genGraph("TuplesPerNode",
 
 genGraph("PackageSize", allPlusNetwork, [64, 128, 256, 512, 1024, 2048], ["Hosts", "PerHost", "Tuples", "packageSize"],
          "packageSize", colors=networkMixedColors,
-         xlabel="Package Size in in Tuples/64",
+         xlabel="Package and buffer size in Tuples/8",
          yfactor=1000,
          ylabel="ns/Tuple")
 
-genGraph("LocalPart", allPlusLocal, range(5, 11), ["Hosts", "PerHost", "Tuples", "LPart"], "LPart", colors=localMixedColors,
-         ylabel="ns/Tuple", yfactor=1000)
 
 
 genGraph("LocalPart",

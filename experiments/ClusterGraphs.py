@@ -15,6 +15,7 @@ def plot_clustered_stacked(dfall,
                            subplotParam: int = 111,
                            l1x: float = 0.5,
                            l2y: float = -0.15,
+                           bottomTitle: bool = False,
                            **kwargs):
     """Given a list of dataframes, with identical columns and index, create a clustered stacked bar plot. 
 labels is a list of the names of the dataframe, used for the legend
@@ -61,7 +62,11 @@ H is the hatch used for identification of the different dataframe"""
 
     axe.set_xticks((np.arange(0, 2 * n_ind, 2) + 1 / float(n_df + 1)) / 2.)
     axe.set_xticklabels(dfall[0].index, rotation = 0)
-    axe.set_title(title)
+    l1y = 1.00
+    if title != "":
+        size = axe.figure.get_size_inches() * axe.figure.dpi
+        axe.set_title(title)
+        l1y=1.1
     if ylabel is not None:
         axe.set_ylabel(ylabel)
 
@@ -73,7 +78,7 @@ H is the hatch used for identification of the different dataframe"""
         n = []
         for i in range(n_df):
             n.append(axe.bar(0, 0, color="gray", hatch=H * i))
-        l1 = axe.legend(h[n_col - 1::-1], l[n_col - 1::-1], bbox_to_anchor=(l1x, 1.00),
+        l1 = axe.legend(h[n_col - 1::-1], l[n_col - 1::-1], bbox_to_anchor=(l1x, l1y),
                         #loc=[0.5, -0.2],
                         loc="lower center", ncol=3)
         if labels is not None:

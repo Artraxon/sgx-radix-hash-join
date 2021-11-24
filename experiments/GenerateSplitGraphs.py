@@ -80,8 +80,8 @@ def genGraphSplit(dir: str, dir2: str, colgroups: List, rows: List, varkeys: Lis
     nocacheDF2: pd.DataFrame = df2.loc['nocache']
     rindex(nocacheDF1.index, xlabel)
     rindex(nocacheDF2.index, xlabel)
-    plot_clustered_stacked([cacheDF1, nocacheDF1], ["caching", "noncaching"], title="", colors=colors, legend=legend, subplotParam=121, l1x=0.8, l2y=-0.15)
-    plot_clustered_stacked([cacheDF2, nocacheDF2], ["caching", "noncaching"], title="", colors=colors, legend=False, subplotParam=122)
+    plot_clustered_stacked([cacheDF1, nocacheDF1], ["caching", "noncaching"], title="a) Switchless", colors=colors, legend=legend, subplotParam=121, l1x=0.8, l2y=-0.15)
+    plot_clustered_stacked([cacheDF2, nocacheDF2], ["caching", "noncaching"], title="b) Switchfull", colors=colors, legend=False, subplotParam=122)
     legend=False
     # plt.yscale("log")
     # nocacheDF.plot(kind="bar", stacked=True)
