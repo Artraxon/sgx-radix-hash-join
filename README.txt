@@ -1,3 +1,20 @@
+This is a radix-hash-join implementation that uses Intels SGX TEE to secure all data that is processed on a machine from external access and encrypts all communication with AES.
+
+Below, you find the README of the original implementation that is used as the foundation. It is part of the Parallel and Distributed Joins Project at ETH Zürich 
+(https://systems.ethz.ch/research/data-processing-on-modern-hardware/projects/parallel-and-distributed-joins.html).
+
+In additition to the setup described there, you will need a working SGX setup.
+
+The programm accepts the following paramters:
+-t <tuples>   : The amount of tuples that each node generates 
+-z <zipf_factor> : If spezified, uses a zipf distribution instead of a uniform distribution with this zipf factor
+-s <zipf_size>   : Required when using -z , spezifies how large the zipf distribution should be
+-n <network_fanout>  : Defaults to 10, otherwise specifies how many bits should be used for the network partitioning fanout
+-l <local_fanout>    : Defaults to 10, otherwise specifies how many bits should be used for the local partitioning fanout
+-p <package_size>    : If specified, the data will be cached and send via packages akin to the original implementation. This parameter specifies how many cache                          lines should be included in one package. 
+
+
+
 ===========================
 Distributed Join Algorithms
 ===========================
